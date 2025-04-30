@@ -1,1 +1,1 @@
-Andromeda Clash is (soon going to be) a game
+Andromeda Clash is (soon going to be) the best shoot 'em up game in history
