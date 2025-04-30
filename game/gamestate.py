@@ -3,9 +3,6 @@ from abc import ABC, abstractmethod
 import pygame
 from . import objects
 from . import user_input as module_user_input
-import win32api
-import win32con
-import win32gui
 
 class GameStateType(ABC):
     canvas: objects.Canvas
@@ -31,20 +28,9 @@ class AndromedaClashGameState(GameStateType):
         self.user_input = user_input
     
     def loop(self) -> None:
-        fuchsia = (255, 0, 128)
-        hwnd = pygame.display.get_wm_info()["window"]
-        win32gui.SetWindowLong(
-            hwnd,
-            win32con.GWL_EXSTYLE,
-            win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE) | win32con.WS_EX_LAYERED | win32con.WS_EX_TOPMOST
-        )
-        win32gui.SetLayeredWindowAttributes(hwnd, win32api.RGB(*fuchsia), 0, win32con.LWA_COLORKEY)
-        win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 200, 200, 200, 200, 0) 
         running = True
         while running:
-            win32gui.ShowWindow(hwnd, 5)
-            win32gui.SetFocus(hwnd)
-            self.canvas.fill(fuchsia)#(0, 0, 0)) # Hintergrund wird mit Schwarz gefüllt. (Farbenwerte werden als RGB-Tupel angegeben)
+            self.canvas.fill((0, 0, 0)) # Hintergrund wird mit Schwarz gefüllt. (Farbenwerte werden als RGB-Tupel angegeben)
             self.user_input.process_tick()
             for event in pygame.event.get():
                 self.user_input.process_event(event)
