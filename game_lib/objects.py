@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from pygame import SurfaceType
 import pygame
 from . import gamestate # Das "." sorgt für einen relativen Import also einen aus dem derzeitigen Modul.
+from . import user_input
 
 # Das ist ein Kommentar, er wird nicht als Code interpretiert.
 
@@ -48,13 +49,24 @@ class SpaceShip(Object2D):
         self.vel = vel
         
     def draw(self, canvas):
-        pygame.draw.rect(canvas, (255, 0, 0), ((self.pos[0] - SPACESHIP_SIZE / 2, self.pos[1] - SPACESHIP_SIZE / 2), (SPACESHIP_SIZE, SPACESHIP_SIZE)))
+        pygame.draw.rect(
+            canvas,
+            (255, 0, 0), # Farbenwerte werden als RGB-Tupel angegeben
+            (
+                (self.pos[0] - SPACESHIP_SIZE / 2, self.pos[1] - SPACESHIP_SIZE / 2), # Position
+                (SPACESHIP_SIZE, SPACESHIP_SIZE) # Größe
+            )
+        )
     
     def update(self):
-        self.pos = [
+        self.pos = (
             self.pos[0] + self.vel[0],
             self.pos[1] + self.vel[1]
-        ]
+        )
+        self.vel = (
+            0.9 * self.vel[0] + self.game_state.user_input.get_key_pressed(user_input.KeyboardKey.K_d) - self.game_state.user_input.get_key_pressed(user_input.KeyboardKey.K_a),
+            0.9 * self.vel[1]
+        )
     
 """
 class Stone(Object2D):
