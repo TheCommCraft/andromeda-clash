@@ -1,11 +1,12 @@
 from __future__ import annotations # Das sorgt dafür, dass Typannotationen besser funktionieren.
 from abc import ABC, abstractmethod
+from typing import Literal
 from pygame import SurfaceType
 import pygame
-from . import gamestate # Das "." sorgt für einen relativen Import also einen aus dem derzeitigen Modul.
+from . import gamestate as game_state # Das "." sorgt für einen relativen Import also einen aus dem derzeitigen Modul.
 from . import user_input
 from . import sound as module_sound
-
+from . import collider
 # Das ist ein Kommentar, er wird nicht als Code interpretiert.
 
 """
@@ -29,7 +30,8 @@ class Object2D(ABC):
     implementiert werden, damit man sie instanziieren kann. Abstrakte Klassen werden verwendet, um quasi
     grundlegende Bausteine zu definieren, ohne zu beschreiben, wie genau diese im Inneren funktionieren.
     """
-    game_state: gamestate.GameStateType
+    game_state: game_state.GameStateType
+    collider: collider.Collider
     
     @property
     def user_input(self):
@@ -54,6 +56,7 @@ class SpaceShip(Object2D):
         self.pos = pos
         self.vel = vel
         self.sound = module_sound.Sound("game/sounds/shoot.wav")
+        self.collider = collider.BoxCollider
         
     def draw(self, canvas):
         pygame.draw.rect(
@@ -99,11 +102,66 @@ class Projectile(Object2D):
             self.pos[1] + self.vel[1]
         )
 
-"""
 class Stone(Object2D):
-    def __init__(self,pos: tuple[float, float], vel: tuple[float, float]):
+    def __init__(self,pos: tuple[float, float], vel: tuple[float, float], size: Literal[1, 2, 3, 4]):
         self.pos = pos
         self.vel = vel
+        self.size = size*10 #Das Ziel ist es 4 verschiedene Geößen von Steinen zu haben. Wird einer zerstört teilt er sich in 2 der kleineren Stufe auf oder verschwindet falls er Stufe 1 war.
 
-    def 
-"""
+    def update(self):
+        if (
+            self.pos[1] < -50 or 
+            self.pos[0] < -50 or 
+            self.pos[0] > game_state.GAME_SIZE[0] + 50
+        ): #50 muss durch size von Stone ersetzt werden
+            self.game_state.current_objects.remove(self)
+        self.pos = (
+            self.pos[0] + self.vel[0],
+            self.pos[1] + self.vel[1]
+        )
+        
+    def collision(self):
+        for g in self.game_state.current_objects:
+            if isinstance(g, Projectile):
+                if self.collider.collides(g.collider):
+                    self.game_state.current_objects.remove(self)
+    
+    def draw(self, canvas):
+        pygame.draw.circle(canvas, (0, 255, 0), self.pos, self.size, 4)
+        
+    
+
+
+
+
+
+
+class Text(Object2D): 
+    BLACK = (0, 0, 0)
+    RED = (255, 0, 0)
+    GREEN = (0, 255, 0)
+    BLUE = (0, 0, 255)
+    GRAY = (200, 200, 200)
+    img: SurfaceType
+    pos: tuple[float, float]
+    text: str
+    text_color: tuple[int, int, int]
+    text_size: int
+    font: pygame.font.FontType
+    
+    def __init__(self, pos: tuple[float, float], text, text_size, text_color):
+        self.pos = pos
+        self.set_text(text, text_size, text_color)
+        
+    def update(self):
+        pass
+        
+    def draw(self, canvas):
+        canvas.blit(self.img,self.pos[0],self.pos[1])       #Zeichnen des Textes
+        
+    def set_text(self, text, text_size, text_color):
+        self.text = text
+        self.text_size = text_size
+        self.text_color = text_color
+        self.font = pygame.font.SysFont(None, self.text_size)       #Font aktualisieren/erstellen
+        self.img = self.font.render(self.text, True, self.text_color)       #Text aktualisieren/erstellen

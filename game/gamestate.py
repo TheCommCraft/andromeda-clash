@@ -1,8 +1,16 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+import random
 import pygame
 from . import objects
 from . import user_input as module_user_input
+import math
+
+GAME_SIZE = (400, 400)
+min_y_vel_stone = 0.5
+max_vel_stone = 1
+step_stone = 0.001
+
 
 class GameStateType(ABC):
     canvas: objects.Canvas
@@ -20,6 +28,7 @@ class AndromedaClashGameState(GameStateType):
     """
     clock: pygame.time.Clock # Wird für Bildrate verwendet.
     fps: int # Bildrate
+    player: objects.SpaceShip
     def __init__(self, canvas: objects.Canvas, user_input: module_user_input.UserInputType) -> None:
         self.canvas = canvas
         self.current_objects = []
@@ -44,3 +53,14 @@ class AndromedaClashGameState(GameStateType):
                 object2d.draw(self.canvas)
             pygame.display.update() # Änderungen werden umgesetzt.
             self.clock.tick(self.fps)
+
+    def spawn_stone(self):
+        if random() < 0.001: #Wahrscheinlichkeit. dass ein Stein entsteht
+            pos = (random.random()*GAME_SIZE[0], 0)
+            
+            vel_y = random.randrange(min_y_vel_stone, max_vel_stone, step_stone)
+            vel_x = math.sqrt(max_vel_stone - vel[1]**2)
+            vel = (vel_x, vel_y)
+            size = random.randrange(1, 5)
+            
+            self.current_objects.append()#Stone muss noch hier erstellt werden
