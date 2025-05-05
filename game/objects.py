@@ -99,11 +99,16 @@ class Projectile(Object2D):
             self.pos[1] + self.vel[1]
         )
 
-"""
+
 class Stone(Object2D):
     def __init__(self,pos: tuple[float, float], vel: tuple[float, float]):
         self.pos = pos
         self.vel = vel
 
-    def 
-"""
+    def update(self):
+        if self.pos[1] < -50:
+            self.game_state.current_objects.remove(self)
+        self.pos = (
+            self.pos[0] + self.vel[0],
+            self.pos[1] + self.vel[1]
+        )
