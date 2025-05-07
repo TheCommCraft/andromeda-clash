@@ -151,7 +151,7 @@ class Text(Object2D):
     
     def __init__(self, pos: tuple[float, float], text, text_size, text_color):
         self.pos = pos
-        self.set_text(text, text_size, text_color)
+        self.set_all(text, text_size, text_color)
         
     def update(self):
         pass
@@ -159,9 +159,20 @@ class Text(Object2D):
     def draw(self, canvas):
         canvas.blit(self.img,self.pos[0],self.pos[1])       #Zeichnen des Textes
         
-    def set_text(self, text, text_size, text_color):
+    def set_all(self, text, text_size, text_color):               #Setter-Methoden
         self.text = text
-        self.text_size = text_size
         self.text_color = text_color
+        self.set_text_size(text_size)
+        
+    def set_text(self, text):
+        self.text = text
+        self.img = self.font.render(self.text, True, self.text_color)       
+        
+    def set_text_size(self, text_size):
+        self.text_size = text_size
         self.font = pygame.font.SysFont(None, self.text_size)       #Font aktualisieren/erstellen
         self.img = self.font.render(self.text, True, self.text_color)       #Text aktualisieren/erstellen
+        
+    def set_text_color(self, text_color):
+        self.text_color = text_color
+        self.img = self.font.render(self.text, True, self.text_color)       
