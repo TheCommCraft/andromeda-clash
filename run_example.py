@@ -9,5 +9,5 @@ user_input = UserInput()
 
 state = AndromedaClashGameState(canvas, user_input)
 ship = SpaceShip((200, 350), (0, 0))
-state.current_objects.append(ship)
+state.add_object(ship)
 state.loop()

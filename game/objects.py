@@ -84,7 +84,7 @@ class SpaceShip(Object2D):
         if self.user_input.get_key_pressed(consts.key.SPACE) and self.shot_cooldown <= 0:
             self.shot_cooldown = self.SHOT_COOLDOWN
             projectile = Projectile(self.pos, (0, -6), 0)
-            self.game_state.current_objects.append(projectile)
+            self.game_state.add_object(projectile)
             self.sound.play()
         self.collider.position = self.pos
 
@@ -104,7 +104,7 @@ class Projectile(Object2D):
     
     def update(self):
         if self.pos[1] < -50:
-            self.game_state.current_objects.remove(self)
+            self.game_state.remove_object(self)
         self.pos = (
             self.pos[0] + self.vel[0],
             self.pos[1] + self.vel[1]
@@ -128,7 +128,7 @@ class Stone(Object2D):
             #abs(self.pos[0] - consts.SCREEN_WIDTH / 2) > consts.SCREEN_WIDTH / 2 + consts.STONE_BASE_RADIUS * self.size or 
             self.pos[1] > consts.SCREEN_HEIGHT + self.size
         ): # 50 muss durch size von Stone ersetzt werden
-            self.game_state.current_objects.remove(self)
+            self.game_state.remove_object(self)
         self.pos = (
             (self.pos[0] + self.vel[0] + self.size) % (consts.SCREEN_WIDTH + self.size * 2) - self.size,
             self.pos[1] + self.vel[1]
@@ -140,9 +140,9 @@ class Stone(Object2D):
         for g in self.game_state.current_objects:
             if isinstance(g, Projectile):
                 if self.collider.collides(g.collider):
-                    self.game_state.current_objects.remove(self)
+                    self.game_state.remove_object(self)
                     # TODO
-                    self.game_state.current_objects.remove(g)
+                    self.game_state.remove_object(g)
     
     def draw(self, canvas):
         pygame.draw.circle(canvas, (0, 255, 0), self.pos, self.size, 4)
