@@ -55,6 +55,12 @@ class UserInputType(ABC):
     @abstractmethod
     def process_tick(self) -> None:
         pass
+    
+    def get_key_up_now(self, key: KeyboardKey) -> bool:
+        return self.get_key_changed(key) and self.get_key_pressed(key)
+    
+    def get_key_down_now(self, key: KeyboardKey) -> bool:
+        return self.get_key_changed(key) and not self.get_key_pressed(key)
 
 class UserInput(UserInputType):
     changed: set[KeyboardKey | MouseButton]

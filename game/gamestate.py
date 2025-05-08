@@ -4,9 +4,10 @@ import random
 import pygame
 from . import objects
 from . import user_input as module_user_input
+from . import consts
 import math
 
-GAME_SIZE = (400, 400)
+GAME_SIZE = (consts.SCREEN_WIDTH, consts.SCREEN_HEIGHT)
 min_y_vel_stone = 0.5
 max_vel_stone = 1
 step_stone = 0.001
@@ -45,6 +46,7 @@ class AndromedaClashGameState(GameStateType):
                 self.user_input.process_event(event)
                 if event.type == pygame.QUIT: # Falls Schliessen-Knopf gedruckt wird, wird das Programm beendet. 
                     running = False
+            self.spawn_stone()
             for object2d in self.current_objects:
                 if not hasattr(object2d, "game_state"):
                     object2d.game_state = self
@@ -55,7 +57,7 @@ class AndromedaClashGameState(GameStateType):
             self.clock.tick(self.fps)
 
     def spawn_stone(self):
-        if random() < 0.001: #Wahrscheinlichkeit. dass ein Stein entsteht
+        if random() < 0.001: # Wahrscheinlichkeit. dass ein Stein entsteht
             pos = (random.random()*GAME_SIZE[0], 0)
             
             vel_y = random.randrange(min_y_vel_stone, max_vel_stone, step_stone)
@@ -63,4 +65,39 @@ class AndromedaClashGameState(GameStateType):
             vel = (vel_x, vel_y)
             size = random.randrange(1, 5)
             
-            self.current_objects.append()#Stone muss noch hier erstellt werden
+            self.current_objects.append() # Stone muss noch hier erstellt werden
+            
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        if random.random() < 0.01:
+            pos = (random.random() * GAME_SIZE[0], 0)
+            vel_y = random.random() * (max_vel_stone - min_y_vel_stone) + min_y_vel_stone
+            vel_x = math.sqrt(max_vel_stone - vel_y**2)
+            vel = (vel_x, vel_y)
+            size = random.randrange(1, 5)
+            self.current_objects.append(objects.Stone(pos, vel, size))
