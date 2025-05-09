@@ -5,7 +5,6 @@ from pygame import SurfaceType
 import pygame
 from . import gamestate as game_state # Das "." sorgt für einen relativen Import also einen aus dem derzeitigen Modul.
 from . import user_input
-from . import sound as module_sound
 from . import collider as module_collider
 from . import consts
 # Das ist ein Kommentar, er wird nicht als Code interpretiert.
@@ -49,7 +48,6 @@ class Object2D(ABC):
 class SpaceShip(Object2D):
     pos: tuple[float, float]
     vel: tuple[float, float]
-    sound: module_sound.Sound
     collider: module_collider.BoxCollider
     shot_cooldown: int # Hiermit wird gezählt, wann wieder geschossen werden darf.
     SHOT_COOLDOWN = 12 # Hiermit wird festgelegt, wie viel Zeit es zwischen Schüssen geben muss.
@@ -57,7 +55,6 @@ class SpaceShip(Object2D):
     def __init__(self, pos: tuple[float, float], vel: tuple[float, float]):
         self.pos = pos
         self.vel = vel
-        self.sound = module_sound.Sound("game/sounds/shoot.wav")
         self.collider = module_collider.BoxCollider(consts.SPACESHIP_HITBOX_WIDTH, consts.SPACESHIP_HITBOX_HEIGHT, pos)
         self.shot_cooldown = 0
         
@@ -78,14 +75,14 @@ class SpaceShip(Object2D):
             self.pos[1] + self.vel[1]
         )
         self.vel = (
-            0.9 * self.vel[0] + self.user_input.get_key_pressed(consts.key.d) - self.user_input.get_key_pressed(consts.key.a),
-            0.9 * self.vel[1]
+            consts.SPACESHIP_INERTIA_FACTOR * self.vel[0] + consts.SPACESHIP_ACCELERATION * (self.user_input.get_key_pressed(consts.key.d) - self.user_input.get_key_pressed(consts.key.a)),
+            consts.SPACESHIP_INERTIA_FACTOR * self.vel[1]
         )
         if self.user_input.get_key_pressed(consts.key.SPACE) and self.shot_cooldown <= 0:
             self.shot_cooldown = self.SHOT_COOLDOWN
-            projectile = Projectile(self.pos, (0, -6), 0)
+            projectile = Projectile(self.pos, (0, -consts.PROJECTILE_SPEED), 0)
             self.game_state.add_object(projectile)
-            self.sound.play()
+            self.game_state.shoot_or_damage_sound.play()
         self.collider.position = self.pos
 
 class Projectile(Object2D):
@@ -97,10 +94,10 @@ class Projectile(Object2D):
         self.pos = pos
         self.vel = vel
         self.direction = direction
-        self.collider = module_collider.BoxCollider(consts.PROJECTILE_SIZE, consts.PROJECTILE_SIZE, pos)
+        self.collider = module_collider.BoxCollider(consts.PROJECTILE_HITBOX_WIDTH, consts.PROJECTILE_HITBOX_HEIGHT, pos)
     
     def draw(self, canvas):
-        pygame.draw.line(canvas, (255, 0, 0), self.pos, (self.pos[0], self.pos[1] + 20), 4)
+        pygame.draw.line(canvas, (255, 0, 0), self.pos, (self.pos[0], self.pos[1] + consts.PROJECTILE_HEIGHT), consts.PROJECTILE_WIDTH)
     
     def update(self):
         if self.pos[1] < -50:
@@ -114,12 +111,12 @@ class Projectile(Object2D):
 class Stone(Object2D):
     pos: tuple[float, float]
     vel: tuple[float, float]
-    collider: module_collider.BoxCollider
-    def __init__(self,pos: tuple[float, float], vel: tuple[float, float], size: Literal[1, 2, 3, 4]):
+    collider: module_collider.CircleCollider
+    def __init__(self, pos: tuple[float, float], vel: tuple[float, float], size: Literal[1, 2, 3, 4]):
         self.pos = pos
         self.vel = vel
         self.size = consts.STONE_BASE_RADIUS * size
-        self.collider = module_collider.BoxCollider(consts.STONE_BASE_HITBOX_WIDTH * size, consts.STONE_BASE_HITBOX_HEIGHT * size, pos)
+        self.collider = module_collider.CircleCollider(consts.STONE_BASE_HITBOX_RADIUS * size, pos)
         # Das Ziel ist es 4 verschiedene Geößen von Steinen zu haben. 
         # Wird einer zerstört teilt er sich in 2 der kleineren Stufe auf oder verschwindet falls er Stufe 1 war.
 
@@ -127,7 +124,7 @@ class Stone(Object2D):
         if (
             #abs(self.pos[0] - consts.SCREEN_WIDTH / 2) > consts.SCREEN_WIDTH / 2 + consts.STONE_BASE_RADIUS * self.size or 
             self.pos[1] > consts.SCREEN_HEIGHT + self.size
-        ): # 50 muss durch size von Stone ersetzt werden
+        ):
             self.game_state.remove_object(self)
         self.pos = (
             (self.pos[0] + self.vel[0] + self.size) % (consts.SCREEN_WIDTH + self.size * 2) - self.size,
@@ -141,8 +138,8 @@ class Stone(Object2D):
             if isinstance(g, Projectile):
                 if self.collider.collides(g.collider):
                     self.game_state.remove_object(self)
-                    # TODO
                     self.game_state.remove_object(g)
+                    self.game_state.shoot_or_damage_sound.play()
     
     def draw(self, canvas):
         pygame.draw.circle(canvas, (0, 255, 0), self.pos, self.size, 4)
@@ -175,9 +172,9 @@ class Text(Object2D):
         pass
         
     def draw(self, canvas):
-        canvas.blit(self.img,self.pos[0],self.pos[1])       #Zeichnen des Textes
+        canvas.blit(self.img,self.pos[0],self.pos[1])       # Zeichnen des Textes
         
-    def set_all(self, text, text_size, text_color):               #Setter-Methoden
+    def set_all(self, text, text_size, text_color):               # Setter-Methoden
         self.text = text
         self.text_color = text_color
         self.set_text_size(text_size)

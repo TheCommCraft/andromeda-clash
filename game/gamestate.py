@@ -7,6 +7,7 @@ from . import objects
 from . import user_input as module_user_input
 from . import consts
 from . import data_structures
+from . import sound as module_sound
 import math
 
 GAME_SIZE = (consts.SCREEN_WIDTH, consts.SCREEN_HEIGHT)
@@ -40,12 +41,14 @@ class AndromedaClashGameState(GameStateType):
     clock: pygame.time.Clock # Wird für Bildrate verwendet.
     fps: int # Bildrate
     player: objects.SpaceShip
+    shoot_or_damage_sound: module_sound.Sound
     def __init__(self, canvas: objects.Canvas, user_input: module_user_input.UserInputType) -> None:
         self.canvas = canvas
         self.current_objects = data_structures.ObjectContainer()
         self.clock = pygame.time.Clock()
         self.fps = 60
         self.user_input = user_input
+        self.shoot_or_damage_sound = module_sound.Sound("game/sounds/shoot.wav")
     
     def add_object(self, obj: objects.Object2D):
         self.current_objects.add_object(obj)
@@ -112,9 +115,10 @@ class AndromedaClashGameState(GameStateType):
         
     
         if random.random() < 0.01:
-            pos = (random.random() * GAME_SIZE[0], 0)
-            vel_y = random.random() * (max_vel_stone - min_y_vel_stone) + min_y_vel_stone
-            vel_x = math.sqrt(max_vel_stone - vel_y**2)
-            vel = (vel_x, vel_y)
             size = random.randrange(1, 5)
+            print("Spawning size", size)
+            pos = (random.random() * GAME_SIZE[0], -size * consts.STONE_BASE_RADIUS)
+            vel_y = random.random() * (max_vel_stone - min_y_vel_stone) + min_y_vel_stone
+            vel_x = math.sqrt(max_vel_stone - vel_y**2) * random.randrange(-1, 2, 2) # -1 oder 1
+            vel = (vel_x, vel_y)
             self.add_object(objects.Stone(pos, vel, size))
