@@ -116,7 +116,6 @@ class AndromedaClashGameState(GameStateType):
     
         if random.random() < 0.01:
             size = random.randrange(1, 5)
-            print("Spawning size", size)
             pos = (random.random() * GAME_SIZE[0], -size * consts.STONE_BASE_RADIUS)
             vel_y = random.random() * (max_vel_stone - min_y_vel_stone) + min_y_vel_stone
             vel_x = math.sqrt(max_vel_stone - vel_y**2) * random.randrange(-1, 2, 2) # -1 oder 1
