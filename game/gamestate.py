@@ -53,7 +53,7 @@ class AndromedaClashGameState(GameStateType):
         self.user_input = user_input
         self.shoot_or_damage_sound = module_sound.Sound(Path(Path(__file__).parent, "sounds", "shoot.wav"))
         self.stone_spawn_probability = 0.01
-        self.score = 0
+        self.score = 
         self.score_object = objects.Text(consts.POS_SCORE, f'SCORE {self.score}', consts.TEXT_SIZE_SCORE, consts.TEXT_COLOR_SCORE)
 
 
@@ -99,4 +99,5 @@ class AndromedaClashGameState(GameStateType):
         self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), "Game over", 20, (255, 255, 255)))
     
     def update_score(self):
-        self.score_object = self.
+        self.score += 1
+        self.score_object.set_text = f'Score {self.score}'
