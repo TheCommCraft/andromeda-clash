@@ -1,5 +1,5 @@
 from __future__ import annotations
-from collections.abc import Iterable, Iterator, Collection
+from collections.abc import Iterable, Iterator
 from typing import Generic, TypeVar
 from . import objects as module_objects
 
@@ -17,7 +17,7 @@ class ReferenceToObject(Generic[T]):
     def __hash__(self) -> int:
         return hash(id(self.obj))
 
-class ObjectContainer:#(Collection[module_objects.Object2D]):
+class ObjectContainer:
     objects: set[ReferenceToObject[module_objects.Object2D]]
     def __init__(self, start_value: Iterable[module_objects.Object2D] = ()):
         self.objects = {ReferenceToObject(obj) for obj in start_value}

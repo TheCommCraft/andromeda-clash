@@ -84,6 +84,11 @@ class SpaceShip(Object2D):
             self.game_state.add_object(projectile)
             self.game_state.shoot_or_damage_sound.play()
         self.collider.position = self.pos
+        for obj in self.game_state.current_objects:
+            if not isinstance(obj, Stone):
+                continue
+            if obj.collider.collides(self.collider):
+                self.game_state.game_over()
 
 class Projectile(Object2D):
     pos: tuple[float, float]
@@ -117,14 +122,10 @@ class Stone(Object2D):
         self.vel = vel
         self.size = consts.STONE_BASE_RADIUS * size
         self.collider = module_collider.CircleCollider(consts.STONE_BASE_HITBOX_RADIUS * size, pos)
-        # Das Ziel ist es 4 verschiedene Geößen von Steinen zu haben. 
-        # Wird einer zerstört teilt er sich in 2 der kleineren Stufe auf oder verschwindet falls er Stufe 1 war.
+    
 
     def update(self):
-        if (
-            #abs(self.pos[0] - consts.SCREEN_WIDTH / 2) > consts.SCREEN_WIDTH / 2 + consts.STONE_BASE_RADIUS * self.size or 
-            self.pos[1] > consts.SCREEN_HEIGHT + self.size
-        ):
+        if (self.pos[1] > consts.SCREEN_HEIGHT + self.size):
             self.game_state.remove_object(self)
         self.pos = (
             (self.pos[0] + self.vel[0] + self.size) % (consts.SCREEN_WIDTH + self.size * 2) - self.size,
@@ -135,16 +136,33 @@ class Stone(Object2D):
         
     def collision(self):
         for g in self.game_state.current_objects:
-            if isinstance(g, Projectile):
-                if self.collider.collides(g.collider):
-                    self.game_state.remove_object(self)
-                    self.game_state.remove_object(g)
-                    self.game_state.shoot_or_damage_sound.play()
+            if not isinstance(g, Projectile):
+                continue
+            if self.collider.collides(g.collider):
+                if self.size/consts.STONE_BASE_RADIUS >= consts.STONE_SIZES[1]:
+                    self.split_stone()
+                self.game_state.score_object.set_text(f'Score {self.game_state.score + 1}')    
+                self.game_state.remove_object(self)
+                self.game_state.remove_object(g)
+                self.game_state.shoot_or_damage_sound.play()
     
+    def split_stone(self):
+        '''
+        Wird ein Stein getroffen, teilt er sich in 2 kleinere auf. Beide fliegen gleich schnell nach unten und zur Seite. Jedoch einer nach rechts und einer nach links.
+        '''
+        self.game_state.add_object(Stone(self.pos, self.vel, (self.size // consts.STONE_BASE_RADIUS) - 1))
+        self.game_state.add_object(Stone(self.pos, (-self.vel[0], self.vel[1]), (self.size // consts.STONE_BASE_RADIUS) - 1))
+
+
     def draw(self, canvas):
         pygame.draw.circle(canvas, (0, 255, 0), self.pos, self.size, 4)
-        
+
+    def set_pos(self, new_pos):
+        self.pos = new_pos
     
+    def set_vel(self, new_vel):
+        self.vel = new_vel
+
 
 
 
@@ -164,7 +182,7 @@ class Text(Object2D):
     text_size: int
     font: pygame.font.FontType
     
-    def __init__(self, pos: tuple[float, float], text, text_size, text_color):
+    def __init__(self, pos: tuple[float, float], text: str, text_size: int, text_color: tuple[int, int, int]):
         self.pos = pos
         self.set_all(text, text_size, text_color)
         
@@ -172,7 +190,10 @@ class Text(Object2D):
         pass
         
     def draw(self, canvas):
-        canvas.blit(self.img,self.pos[0],self.pos[1])       # Zeichnen des Textes
+        rect = self.img.get_rect()
+        pos_x = self.pos[0] - rect.width / 2
+        pos_y = self.pos[1] - rect.height / 2
+        canvas.blit(self.img, (pos_x, pos_y))       # Zeichnen des Textes
         
     def set_all(self, text, text_size, text_color):               # Setter-Methoden
         self.text = text
@@ -185,9 +206,9 @@ class Text(Object2D):
         
     def set_text_size(self, text_size):
         self.text_size = text_size
-        self.font = pygame.font.SysFont(None, self.text_size)       #Font aktualisieren/erstellen
-        self.img = self.font.render(self.text, True, self.text_color)       #Text aktualisieren/erstellen
+        self.font = pygame.font.SysFont(None, self.text_size)       # Font aktualisieren/erstellen
+        self.img = self.font.render(self.text, True, self.text_color)       # Text aktualisieren/erstellen
         
     def set_text_color(self, text_color):
         self.text_color = text_color
-        self.img = self.font.render(self.text, True, self.text_color)       
+        self.img = self.font.render(self.text, True, self.text_color)    

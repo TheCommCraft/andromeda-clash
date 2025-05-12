@@ -229,3 +229,4 @@ class KeyboardKey(Enum):
     POWER = pygame.K_POWER
     EURO = pygame.K_EURO
     AC_BACK = pygame.K_AC_BACK
+    FIIK = 1073742086

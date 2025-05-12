@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Collection, Iterator
+from collections.abc import Collection
+from pathlib import Path
 import random
 import pygame
 from . import objects
@@ -11,9 +12,8 @@ from . import sound as module_sound
 import math
 
 GAME_SIZE = (consts.SCREEN_WIDTH, consts.SCREEN_HEIGHT)
-min_y_vel_stone = 0.5
-max_vel_stone = 1
-step_stone = 0.001
+imp = pygame.image.load(Path(Path(__file__).parent, "images", "lx5gafg9.png"))
+
 
 class GameStateType(ABC):
     canvas: objects.Canvas
@@ -42,14 +42,21 @@ class AndromedaClashGameState(GameStateType):
     fps: int # Bildrate
     player: objects.SpaceShip
     shoot_or_damage_sound: module_sound.Sound
+    min_y_vel_stone = 0.5
+    max_vel_stone = 1
+    stone_spawn_probability: float
     def __init__(self, canvas: objects.Canvas, user_input: module_user_input.UserInputType) -> None:
         self.canvas = canvas
         self.current_objects = data_structures.ObjectContainer()
         self.clock = pygame.time.Clock()
         self.fps = 60
         self.user_input = user_input
-        self.shoot_or_damage_sound = module_sound.Sound("game/sounds/shoot.wav")
-    
+        self.shoot_or_damage_sound = module_sound.Sound(Path(Path(__file__).parent, "sounds", "shoot.wav"))
+        self.stone_spawn_probability = 0.01
+        self.score = 0
+        self.score_object = objects.Text(consts.POS_SCORE, f'SCORE {self.score}', consts.TEXT_SIZE_SCORE, consts.TEXT_COLOR_SCORE)
+
+
     def add_object(self, obj: objects.Object2D):
         self.current_objects.add_object(obj)
     
@@ -76,48 +83,20 @@ class AndromedaClashGameState(GameStateType):
             self.clock.tick(self.fps)
 
     def spawn_stone(self):
-        if random() < 0.001: # Wahrscheinlichkeit. dass ein Stein entsteht
-            pos = (random.random()*GAME_SIZE[0], 0)
+        if random.random() < self.stone_spawn_probability: # Wahrscheinlichkeit. dass ein Stein entsteht
             
-            vel_y = random.randrange(min_y_vel_stone, max_vel_stone, step_stone)
-            vel_x = math.sqrt(max_vel_stone - vel[1]**2)
+            vel_y = AndromedaClashGameState.min_y_vel_stone + random.random() * (AndromedaClashGameState.max_vel_stone - AndromedaClashGameState.min_y_vel_stone)   #Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
+            vel_x = math.sqrt(AndromedaClashGameState.max_vel_stone - vel_y**2) * random.randrange(-1, 2, 2)   #Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
             vel = (vel_x, vel_y)
-            size = random.randrange(1, 5)
+            size = random.choice(consts.STONE_SIZES)
+            pos = (random.random()*GAME_SIZE[0], -consts.STONE_BASE_RADIUS * size)
             
-            self.current_objects.append() # Stone muss noch hier erstellt werden
-            # ^ Hier sollte self.add_object verwendet werden.
-            
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-    
-        if random.random() < 0.01:
-            size = random.randrange(1, 5)
-            pos = (random.random() * GAME_SIZE[0], -size * consts.STONE_BASE_RADIUS)
-            vel_y = random.random() * (max_vel_stone - min_y_vel_stone) + min_y_vel_stone
-            vel_x = math.sqrt(max_vel_stone - vel_y**2) * random.randrange(-1, 2, 2) # -1 oder 1
-            vel = (vel_x, vel_y)
             self.add_object(objects.Stone(pos, vel, size))
+    
+    def game_over(self):
+        for obj in self.current_objects:
+            self.remove_object(obj)
+        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), "Game over", 20, (255, 255, 255)))
+    
+    def update_score(self):
+        self.score_object = self.
