@@ -66,7 +66,7 @@ class CircleCollider(PositionedCollider):
     
     def collide_box_collider(self, other: BoxCollider):
         dx, dy = other.pos_x - self.pos_x, other.pos_y - self.pos_y
-        reduced_dx, reduced_dy = abs(dx) - other.width / 2, abs(dy) - other.height / 2
+        reduced_dx, reduced_dy = max(abs(dx) - other.width / 2, 0), max(abs(dy) - other.height / 2, 0)
         return math.sqrt(reduced_dx ** 2 + reduced_dy ** 2) <= self.radius
 
 
