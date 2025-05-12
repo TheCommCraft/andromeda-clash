@@ -1,3 +1,4 @@
+import asyncio
 import pygame
 from game.objects import SpaceShip
 from game.gamestate import AndromedaClashGameState, GAME_SIZE
@@ -11,4 +12,4 @@ user_input = UserInput()
 state = AndromedaClashGameState(canvas, user_input)
 ship = SpaceShip((200, 350), (0, 0))
 state.add_object(ship)
-state.loop()
+asyncio.run(state.loop())

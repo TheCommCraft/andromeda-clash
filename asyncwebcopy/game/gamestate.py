@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Collection
 from pathlib import Path
+import asyncio
 import random
 import pygame
 from . import objects
@@ -63,7 +64,7 @@ class AndromedaClashGameState(GameStateType):
     def remove_object(self, obj: objects.Object2D):
         self.current_objects.remove_object(obj)
     
-    def loop(self) -> None:
+    async def loop(self) -> None:
         running = True
         while running:
             self.canvas.fill((0, 0, 0)) # Hintergrund wird mit Schwarz gefüllt. (Farbenwerte werden als RGB-Tupel angegeben)
@@ -80,7 +81,7 @@ class AndromedaClashGameState(GameStateType):
             for object2d in self.current_objects:
                 object2d.draw(self.canvas)
             pygame.display.update() # Änderungen werden umgesetzt.
-            self.clock.tick(self.fps)
+            await asyncio.sleep(1/self.fps)
 
     def spawn_stone(self):
         if random.random() < self.stone_spawn_probability: # Wahrscheinlichkeit. dass ein Stein entsteht
