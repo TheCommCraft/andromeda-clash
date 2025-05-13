@@ -5,6 +5,7 @@ from pathlib import Path
 import asyncio
 import random
 import pygame
+import pyautogui
 from . import objects
 from . import user_input as module_user_input
 from . import consts
@@ -46,6 +47,7 @@ class AndromedaClashGameState(GameStateType):
     min_y_vel_stone = 0.5
     max_vel_stone = 1
     stone_spawn_probability: float
+    p_pos: tuple[float, float]
     def __init__(self, canvas: objects.Canvas, user_input: module_user_input.UserInputType) -> None:
         self.canvas = canvas
         self.current_objects = data_structures.ObjectContainer()
@@ -56,7 +58,7 @@ class AndromedaClashGameState(GameStateType):
         self.stone_spawn_probability = consts.START_STONE_SPAWNING_PROBABILITY
         self.score = 0
         self.score_object = objects.Text(consts.POS_SCORE, f'SCORE {self.score}', consts.TEXT_SIZE_SCORE, consts.TEXT_COLOR_SCORE)
-
+        self.p_pos = (0.0, 0.0)
 
     def add_object(self, obj: objects.Object2D):
         self.current_objects.add_object(obj)
@@ -66,6 +68,8 @@ class AndromedaClashGameState(GameStateType):
     
     async def loop(self) -> None:
         running = True
+        last_pos = None
+        real_pos = pyautogui.Window(hWnd=pygame.display.get_wm_info()["window"]).topleft
         while running:
             self.canvas.fill((0, 0, 0)) # Hintergrund wird mit Schwarz gefüllt. (Farbenwerte werden als RGB-Tupel angegeben)
             self.user_input.process_tick()
@@ -74,14 +78,20 @@ class AndromedaClashGameState(GameStateType):
                 if event.type == pygame.QUIT: # Falls Schliessen-Knopf gedruckt wird, wird das Programm beendet. 
                     running = False
             self.spawn_stone()
-            for object2d in self.current_objects:
+            current_objects = list(self.current_objects)
+            for object2d in current_objects:
                 if not hasattr(object2d, "game_state"):
                     object2d.game_state = self
                 object2d.update()
-            for object2d in self.current_objects:
+            for object2d in current_objects:
                 object2d.draw(self.canvas)
             pygame.display.update() # Änderungen werden umgesetzt.
-            await asyncio.sleep(1/self.fps)
+            r_pos = last_pos and (self.p_pos[0] - last_pos[0], self.p_pos[1] - last_pos[1]) or (0, 0)
+            last_pos = self.p_pos
+            real_pos = (real_pos[0] + r_pos[0], real_pos[1] + r_pos[1])
+            pyautogui.Window(hWnd=pygame.display.get_wm_info()["window"]).moveTo(int(real_pos[0]), int(real_pos[1]))
+            self.clock.tick(self.fps)
+            await asyncio.sleep(0)
 
     def spawn_stone(self):
         if random.random() < self.stone_spawn_probability: # Wahrscheinlichkeit. dass ein Stein entsteht

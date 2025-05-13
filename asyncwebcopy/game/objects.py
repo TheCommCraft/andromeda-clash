@@ -64,7 +64,7 @@ class SpaceShip(Object2D):
             canvas,
             (255, 0, 0), # Farbenwerte werden als RGB-Tupel angegeben
             (
-                (self.pos[0] - consts.SPACESHIP_WIDTH / 2, self.pos[1] - consts.SPACESHIP_HEIGHT / 2), # Position
+                (self.pos[0] - self.game_state.p_pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), # Position
                 (consts.SPACESHIP_WIDTH, consts.SPACESHIP_HEIGHT) # Größe
             )
         )
@@ -72,7 +72,7 @@ class SpaceShip(Object2D):
     def update(self):
         self.shot_cooldown -= 1
         self.pos = (
-            (self.pos[0] + self.vel[0] + consts.SPACESHIP_WIDTH / 2) % (consts.SCREEN_WIDTH + consts.SPACESHIP_WIDTH) - consts.SPACESHIP_WIDTH / 2,
+            (self.pos[0] + self.vel[0] + consts.SCREEN_WIDTH / 2 - self.game_state.p_pos[0]) % (consts.SCREEN_WIDTH + consts.SPACESHIP_WIDTH) - consts.SCREEN_WIDTH / 2 + self.game_state.p_pos[0],
             self.pos[1] + self.vel[1]
         )
         self.vel = (
@@ -85,11 +85,13 @@ class SpaceShip(Object2D):
             self.game_state.add_object(projectile)
             self.game_state.shoot_or_damage_sound.play()
         self.collider.position = self.pos
+        self.game_state.p_pos = (self.pos[0] - consts.SCREEN_WIDTH / 2, self.pos[1])
         for obj in self.game_state.current_objects:
             if not isinstance(obj, Stone):
                 continue
             if obj.collider.collides(self.collider):
                 self.game_state.game_over()
+                
 
 class Projectile(Object2D):
     pos: tuple[float, float]
@@ -103,7 +105,7 @@ class Projectile(Object2D):
         self.collider = module_collider.BoxCollider(consts.PROJECTILE_HITBOX_WIDTH, consts.PROJECTILE_HITBOX_HEIGHT, pos)
     
     def draw(self, canvas):
-        pygame.draw.line(canvas, (255, 0, 0), self.pos, (self.pos[0], self.pos[1] + consts.PROJECTILE_HEIGHT), consts.PROJECTILE_WIDTH)
+        pygame.draw.line(canvas, (255, 0, 0), (self.pos[0] - self.game_state.p_pos[0], self.pos[1]), (self.pos[0] - self.game_state.p_pos[0], self.pos[1] + consts.PROJECTILE_HEIGHT), consts.PROJECTILE_WIDTH)
     
     def update(self):
         if self.pos[1] < -50:
@@ -129,7 +131,7 @@ class Stone(Object2D):
         if (self.pos[1] > consts.SCREEN_HEIGHT + self.size):
             self.game_state.remove_object(self)
         self.pos = (
-            (self.pos[0] + self.vel[0] + self.size) % (consts.SCREEN_WIDTH + self.size * 2) - self.size,
+            (self.pos[0] + self.vel[0] + self.size - self.game_state.p_pos[0]) % (consts.SCREEN_WIDTH + self.size * 2) - self.size + self.game_state.p_pos[0],
             self.pos[1] + self.vel[1]
         )
         self.collider.position = self.pos
@@ -159,7 +161,7 @@ class Stone(Object2D):
 
 
     def draw(self, canvas):
-        pygame.draw.circle(canvas, (0, 255, 0), self.pos, self.size, 4)
+        pygame.draw.circle(canvas, (0, 255, 0), (self.pos[0] - self.game_state.p_pos[0], self.pos[1]), self.size, 4)
 
     def set_pos(self, new_pos):
         self.pos = new_pos
