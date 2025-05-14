@@ -36,6 +36,9 @@ class Object2D(ABC):
     def user_input(self):
         return self.game_state.user_input
     
+    def get_draw_details(self) -> consts.DrawDetails:
+        return consts.DrawDetails.NONE
+    
     @abstractmethod # Das ist eine abstrakte Methode, also eine von den erwähnten, nicht implementierten Methoden.
     def draw(self, canvas: Canvas) -> None:
         pass
@@ -85,7 +88,7 @@ class SpaceShip(Object2D):
             (self.pos[0] + self.vel[0] + consts.SPACESHIP_WIDTH / 2)
                 % (consts.SCREEN_WIDTH + consts.SPACESHIP_WIDTH)
                 - consts.SPACESHIP_WIDTH / 2,
-            self.pos[1] + self.vel[1]
+            min(self.pos[1] + self.vel[1], consts.SCREEN_HEIGHT - consts.SPACESHIP_HEIGHT - 16)
         )
         self.vel = (
             consts.SPACESHIP_INERTIA_FACTOR * self.vel[0]
@@ -96,7 +99,11 @@ class SpaceShip(Object2D):
             consts.SPACESHIP_INERTIA_FACTOR * self.vel[1]
                 + (
                     consts.SPACESHIP_ACCELERATION
-                    * (self.user_input.get_key_pressed(consts.key.s) - self.user_input.get_key_pressed(consts.key.w))
+                    * (
+                        self.user_input.get_key_pressed(consts.key.s)
+                        * (self.pos[1] < consts.SCREEN_HEIGHT - consts.SPACESHIP_HEIGHT - 16)
+                        - self.user_input.get_key_pressed(consts.key.w)
+                    )
                 )
         )
         if self.user_input.get_key_pressed(consts.key.SPACE) and self.shot_cooldown <= 0:
@@ -216,6 +223,9 @@ class LiveDisplay(Object2D):
     
     def update(self):
         pass
+    
+    def get_draw_details(self):
+        return consts.DrawDetails.TOP_LAYER
 
     def draw(self, canvas):
         for i in range(self.lives):
@@ -269,3 +279,7 @@ class Text(Object2D):
     @lru_cache(256)
     def load_font(name: str | Path, size: int) -> pygame.font.FontType:
         return pygame.font.Font(name, size)
+
+class Score(Text):
+    def get_draw_details(self):
+        return consts.DrawDetails.TOP_LAYER

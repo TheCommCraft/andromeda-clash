@@ -1,4 +1,5 @@
 from .user_input import KeyboardKey as key
+from enum import Flag, auto
 from pathlib import Path
 
 SPACESHIP_WIDTH = 20
@@ -50,3 +51,9 @@ HIT_SOUND_PATH = Path(SOUNDS_PATH, "hit.wav")
 EXPLOSION_SOUND_PATH = Path(SOUNDS_PATH, "explosion.wav")
 
 FONT_NAME = Path(FONTS_PATH, "8bitoperator_jve.ttf")
+
+# Unique message values
+
+class DrawDetails(Flag):
+    NONE = 0
+    TOP_LAYER = auto()

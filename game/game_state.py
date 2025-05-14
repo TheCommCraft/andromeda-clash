@@ -47,7 +47,7 @@ class AndromedaClashGameState(GameStateType):
     stone_spawn_probability: float
     score: int
     highscore: int
-    score_object: objects.Text
+    score_object: objects.Score
     lives_object: objects.LiveDisplay
     @property
     def lives(self) -> int:
@@ -72,7 +72,7 @@ class AndromedaClashGameState(GameStateType):
     def start_game(self):
         self.remove_all_objects()
         self.score = 0
-        self.score_object = objects.Text(consts.POS_SCORE, "", consts.TEXT_SIZE_SCORE, consts.TEXT_COLOR_SCORE)
+        self.score_object = objects.Score(consts.POS_SCORE, "", consts.TEXT_SIZE_SCORE, consts.TEXT_COLOR_SCORE)
         self.update_score()
         self.add_object(self.score_object)
         
@@ -108,7 +108,14 @@ class AndromedaClashGameState(GameStateType):
                 if not hasattr(object2d, "game_state"):
                     object2d.game_state = self
                 object2d.update()
+            top_layered = []
             for object2d in self.current_objects:
+                draw_details = object2d.get_draw_details()
+                if consts.DrawDetails.TOP_LAYER in draw_details:
+                    top_layered.append(object2d)
+                    continue
+                object2d.draw(self.canvas)
+            for object2d in top_layered:
                 object2d.draw(self.canvas)
             if self.user_input.get_key_down_now(consts.key.r):
                 self.start_game()
@@ -131,10 +138,10 @@ class AndromedaClashGameState(GameStateType):
         self.remove_all_objects()
         if self.score > self.highscore:
             self.highscore = self.score
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT), "GAME OVER", 20, (255, 255, 255)))
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), f"SCORE: {self.score}", 20, (255, 255, 255)))
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT), f"HIGHSCORE: {self.highscore}", 20, (255, 255, 255)))
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 2.5), f"PRESS R TO RESTART", 20, (200, 200, 200)))
+        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT), "GAME OVER", 16, (255, 255, 255)))
+        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), f"SCORE: {self.score}", 16, (255, 255, 255)))
+        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT), f"HIGHSCORE: {self.highscore}", 16, (255, 255, 255)))
+        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 2.5), "PRESS R TO RESTART", 16, (200, 200, 200)))
         self.score = 0
     
     def update_score(self):
