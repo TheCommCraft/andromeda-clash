@@ -53,6 +53,10 @@ class AndromedaClashGameState(GameStateType):
     def lives(self) -> int:
         return self.lives_object.lives
     
+    @lives.setter
+    def lives(self, value):
+        self.lives_object.lives = value
+    
     def __init__(self, canvas: objects.Canvas, user_input: module_user_input.UserInputType) -> None:
         self.canvas = canvas
         self.current_objects = data_structures.ObjectContainer()
@@ -61,8 +65,13 @@ class AndromedaClashGameState(GameStateType):
         self.user_input = user_input
         self.stone_spawn_probability = consts.START_STONE_SPAWNING_PROBABILITY
         
-        self.score = 0
         self.highscore = 0
+        
+        self.start_game()
+    
+    def start_game(self):
+        self.remove_all_objects()
+        self.score = 0
         self.score_object = objects.Text(consts.POS_SCORE, "", consts.TEXT_SIZE_SCORE, consts.TEXT_COLOR_SCORE)
         self.update_score()
         self.add_object(self.score_object)
@@ -74,7 +83,7 @@ class AndromedaClashGameState(GameStateType):
     
     def add_object(self, obj: objects.Object2D):
         self.current_objects.add_object(obj)
-        
+    
     def add_player(self):
         self.player = objects.SpaceShip((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT - consts.SPACESHIP_HEIGHT + 8), (0, 0))
         self.add_object(self.player)
@@ -102,16 +111,15 @@ class AndromedaClashGameState(GameStateType):
             for object2d in self.current_objects:
                 object2d.draw(self.canvas)
             if self.user_input.get_key_down_now(consts.key.r):
-                self.remove_all_objects()
-                self.add_player()
+                self.start_game()
             pygame.display.update() # Änderungen werden umgesetzt.
             self.clock.tick(self.fps)
 
     def spawn_stone(self):
         if random.random() < self.stone_spawn_probability: # Wahrscheinlichkeit. dass ein Stein entsteht
             
-            vel_y = AndromedaClashGameState.min_y_vel_stone + random.random() * (AndromedaClashGameState.max_vel_stone - AndromedaClashGameState.min_y_vel_stone)   #Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
-            vel_x = math.sqrt(AndromedaClashGameState.max_vel_stone - vel_y**2) * random.randrange(-1, 2, 2)   #Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
+            vel_y = self.min_y_vel_stone + random.random() * (self.max_vel_stone - self.min_y_vel_stone)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
+            vel_x = math.sqrt(self.max_vel_stone - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
             vel = (vel_x, vel_y)
             size = random.choice(consts.STONE_SIZES)
             pos = (random.random()*GAME_SIZE[0], -consts.STONE_BASE_RADIUS * size)
@@ -123,7 +131,7 @@ class AndromedaClashGameState(GameStateType):
         self.remove_all_objects()
         if self.score > self.highscore:
             self.highscore = self.score
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT), f"GAME OVER", 20, (255, 255, 255)))
+        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT), "GAME OVER", 20, (255, 255, 255)))
         self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), f"SCORE: {self.score}", 20, (255, 255, 255)))
         self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT), f"HIGHSCORE: {self.highscore}", 20, (255, 255, 255)))
         self.score = 0

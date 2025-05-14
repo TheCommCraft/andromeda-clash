@@ -9,7 +9,7 @@ from . import game_state # Das "." sorgt für einen relativen Import also einen 
 from . import sound as module_sound
 from . import collider as module_collider
 from . import consts
-from .images import load_image
+from .images import load_image, Image
 # Das ist ein Kommentar, er wird nicht als Code interpretiert.
 
 
@@ -49,16 +49,24 @@ class SpaceShip(Object2D):
     collider: module_collider.BoxCollider
     shot_cooldown: int # Hiermit wird gezählt, wann wieder geschossen werden darf.
     SHOT_COOLDOWN = 6 # Hiermit wird festgelegt, wie viel Zeit es zwischen Schüssen geben muss.
-    lives: int
     shoot_sound: module_sound.Sound
+    damage_sound: module_sound.Sound
+    game_state: game_state.AndromedaClashGameState
+    @property
+    def lives(self) -> int:
+        return self.game_state.lives
     
-    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], lives = 3):
+    @lives.setter
+    def lives(self, value):
+        self.game_state.lives = value
+    
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number]):
         self.pos = pos
         self.vel = vel
         self.collider = module_collider.BoxCollider(consts.SPACESHIP_HITBOX_WIDTH, consts.SPACESHIP_HITBOX_HEIGHT, pos)
         self.shot_cooldown = 0
-        self.lives = lives
         self.shoot_sound = module_sound.load_sound(consts.SHOOT_SOUND_PATH)
+        self.damage_sound = module_sound.load_sound(consts.HIT_SOUND_PATH)
 
     def draw(self, canvas):
         pygame.draw.rect(
@@ -101,6 +109,7 @@ class SpaceShip(Object2D):
                 continue
             if obj.collider.collides(self.collider):
                 self.lives -= 1
+                self.damage_sound.play()
                 self.game_state.remove_object(obj)
                 if self.lives <= 0:
                     self.game_state.game_over()
@@ -144,7 +153,7 @@ class Stone(Object2D):
         self.vel = vel
         self.size = consts.STONE_BASE_RADIUS * size
         self.collider = module_collider.CircleCollider(consts.STONE_BASE_HITBOX_RADIUS * size, pos)
-        self.death_sound = module_sound.Sound(consts.SHOOT_SOUND_PATH)
+        self.death_sound = module_sound.load_sound(consts.EXPLOSION_SOUND_PATH)
 
     def update(self):
         if (self.pos[1] > consts.SCREEN_HEIGHT + self.size):
@@ -194,7 +203,7 @@ class Stone(Object2D):
 
 
 class LiveDisplay(Object2D):
-    image: pygame.SurfaceType
+    image: Image
     pos: tuple[number, number]
     lives: int
     image_width: number
