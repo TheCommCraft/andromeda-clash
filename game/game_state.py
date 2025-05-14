@@ -123,7 +123,9 @@ class AndromedaClashGameState(GameStateType):
         self.remove_all_objects()
         if self.score > self.highscore:
             self.highscore = self.score
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), f"GAME OVER\nSCORE: {self.score}\nHIGHSCORE: {self.highscore} ", 20, (255, 255, 255)))
+        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT), f"GAME OVER", 20, (255, 255, 255)))
+        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), f"SCORE: {self.score}", 20, (255, 255, 255)))
+        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT), f"HIGHSCORE: {self.highscore}", 20, (255, 255, 255)))
         self.score = 0
     
     def update_score(self):

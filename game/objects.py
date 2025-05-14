@@ -161,7 +161,7 @@ class Stone(Object2D):
             if not isinstance(g, Projectile):
                 continue
             if self.collider.collides(g.collider):
-                if self.size/consts.STONE_BASE_RADIUS >= consts.STONE_SIZES[1]:
+                if self.size / consts.STONE_BASE_RADIUS >= consts.STONE_SIZES[1]:
                     self.split_stone()
                 self.game_state.remove_object(self)
                 self.game_state.remove_object(g)
@@ -202,6 +202,7 @@ class LiveDisplay(Object2D):
         self.image = load_image(consts.HEART_IMAGE_PATH)
         self.image_width = self.image.get_width()
         self.lives = lives
+        self.pos = consts.POS_LIVES
     
     def update(self):
         pass
