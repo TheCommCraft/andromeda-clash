@@ -2,7 +2,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Collection
 from pathlib import Path
-import asyncio
 import random
 import pygame
 from . import objects
@@ -42,29 +41,51 @@ class AndromedaClashGameState(GameStateType):
     clock: pygame.time.Clock # Wird für Bildrate verwendet.
     fps: int # Bildrate
     player: objects.SpaceShip
-    shoot_or_damage_sound: module_sound.Sound
+    user_input: module_user_input.UserInputType
     min_y_vel_stone = 0.5
     max_vel_stone = 1
     stone_spawn_probability: float
+    score: int
+    highscore: int
+    score_object: objects.Text
+    lives_object: objects.LiveDisplay
+    @property
+    def lives(self) -> int:
+        return self.lives_object.lives
+    
     def __init__(self, canvas: objects.Canvas, user_input: module_user_input.UserInputType) -> None:
         self.canvas = canvas
         self.current_objects = data_structures.ObjectContainer()
         self.clock = pygame.time.Clock()
         self.fps = 60
         self.user_input = user_input
-        self.shoot_or_damage_sound = module_sound.Sound(Path(Path(__file__).parent, "sounds", "shoot.wav"))
         self.stone_spawn_probability = consts.START_STONE_SPAWNING_PROBABILITY
+        
         self.score = 0
-        self.score_object = objects.Text(consts.POS_SCORE, f'SCORE {self.score}', consts.TEXT_SIZE_SCORE, consts.TEXT_COLOR_SCORE)
-
-
+        self.highscore = 0
+        self.score_object = objects.Text(consts.POS_SCORE, "", consts.TEXT_SIZE_SCORE, consts.TEXT_COLOR_SCORE)
+        self.update_score()
+        self.add_object(self.score_object)
+        
+        self.lives_object = objects.LiveDisplay()
+        self.add_object(self.lives_object)
+        
+        self.add_player()
+    
     def add_object(self, obj: objects.Object2D):
         self.current_objects.add_object(obj)
+        
+    def add_player(self):
+        self.player = objects.SpaceShip((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT - consts.SPACESHIP_HEIGHT + 8), (0, 0))
+        self.add_object(self.player)
     
     def remove_object(self, obj: objects.Object2D):
         self.current_objects.remove_object(obj)
     
-    async def loop(self) -> None:
+    def remove_all_objects(self):
+        self.current_objects.remove_all()
+        
+    def loop(self) -> None:
         running = True
         while running:
             self.canvas.fill((0, 0, 0)) # Hintergrund wird mit Schwarz gefüllt. (Farbenwerte werden als RGB-Tupel angegeben)
@@ -80,8 +101,11 @@ class AndromedaClashGameState(GameStateType):
                 object2d.update()
             for object2d in self.current_objects:
                 object2d.draw(self.canvas)
+            if self.user_input.get_key_down_now(consts.key.r):
+                self.remove_all_objects()
+                self.add_player()
             pygame.display.update() # Änderungen werden umgesetzt.
-            await asyncio.sleep(1/self.fps)
+            self.clock.tick(self.fps)
 
     def spawn_stone(self):
         if random.random() < self.stone_spawn_probability: # Wahrscheinlichkeit. dass ein Stein entsteht
@@ -96,10 +120,11 @@ class AndromedaClashGameState(GameStateType):
         self.stone_spawn_probability += consts.STONE_SPAWNING_PROPABILITY_INCREASE / (1 + self.stone_spawn_probability * consts.STONE_SPAWNING_PROPABILITY_INCREASE_DECREASE)
     
     def game_over(self):
-        for obj in self.current_objects:
-            self.remove_object(obj)
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), "Game over", 20, (255, 255, 255)))
+        self.remove_all_objects()
+        if self.score > self.highscore:
+            self.highscore = self.score
+        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), f"GAME OVER\nSCORE: {self.score}\nHIGHSCORE: {self.highscore} ", 20, (255, 255, 255)))
+        self.score = 0
     
     def update_score(self):
-        self.score += 1
-        self.score_object.set_text = f'Score {self.score}'
+        self.score_object.set_text(f'SCORE {self.score}')

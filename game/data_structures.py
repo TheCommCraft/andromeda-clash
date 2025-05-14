@@ -22,13 +22,16 @@ class ObjectContainer:
     def __init__(self, start_value: Iterable[module_objects.Object2D] = ()):
         self.objects = {ReferenceToObject(obj) for obj in start_value}
     
-    def add_object(self, value: module_objects.Object2D):
+    def add_object(self, value: module_objects.Object2D) -> None:
         self.objects.add(ReferenceToObject(value))
 
-    def remove_object(self, value: module_objects.Object2D):
+    def remove_object(self, value: module_objects.Object2D) -> None:
         if value not in self:
             return
         self.objects.remove(ReferenceToObject(value))
+    
+    def remove_all(self) -> None:
+        self.objects.clear()
     
     def __iter__(self) -> Iterator[module_objects.Object2D]:
         return iter(obj.obj for obj in self.objects.copy())

@@ -1,6 +1,6 @@
 import pygame
 from game.objects import SpaceShip
-from game.gamestate import AndromedaClashGameState, GAME_SIZE
+from game.game_state import AndromedaClashGameState, GAME_SIZE
 from game.user_input import UserInput
 
 
@@ -9,6 +9,4 @@ canvas = pygame.display.set_mode(GAME_SIZE) # Bildschirmgröße festlegen und da
 user_input = UserInput()
 
 state = AndromedaClashGameState(canvas, user_input)
-ship = SpaceShip((200, 350), (0, 0))
-state.add_object(ship)
 state.loop()

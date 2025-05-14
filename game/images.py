@@ -1,5 +1,10 @@
-from PIL import Image 
+from pygame import image
+import pygame
+from functools import cache
+from collections.abc import Callable, Hashable
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from _typeshed import FileDescriptorOrPath
 
-filename = "sky"
-
-sky = Image.open("/Users/lottagringmuth-dallmer/Downloads/hand-painted-watercolour-night-sky-background/watercolour_night_sky_background_2607.jpg")
+_load_image = cache(image.load)
+load_image: Callable[["FileDescriptorOrPath"], pygame.Surface] = lambda x: _load_image(x) if isinstance(x, Hashable) else _load_image("")
