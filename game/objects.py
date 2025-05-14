@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Literal
 import random
 from pathlib import Path
+from functools import lru_cache
 from pygame import SurfaceType
 import pygame
 from . import game_state # Das "." sorgt für einen relativen Import also einen aus dem derzeitigen Modul.
@@ -246,20 +247,25 @@ class Text(Object2D):
         pos_y = self.pos[1] - rect.height / 2
         canvas.blit(self.img, (pos_x, pos_y))       # Zeichnen des Textes
         
-    def set_all(self, text, text_size, text_color):               # Setter-Methoden
+    def set_all(self, text: str, text_size: int, text_color: tuple[int, int, int]):               # Setter-Methoden
         self.text = text
         self.text_color = text_color
         self.set_text_size(text_size)
         
-    def set_text(self, text):
+    def set_text(self, text: str):
         self.text = text
         self.img = self.font.render(self.text, True, self.text_color)       
         
-    def set_text_size(self, text_size):
+    def set_text_size(self, text_size: int):
         self.text_size = text_size
-        self.font = pygame.font.SysFont(None, self.text_size)       # Font aktualisieren/erstellen
+        self.font = self.load_font(consts.FONT_NAME, text_size)       # Font aktualisieren/erstellen
         self.img = self.font.render(self.text, True, self.text_color)       # Text aktualisieren/erstellen
         
-    def set_text_color(self, text_color):
+    def set_text_color(self, text_color: tuple[int, int, int]):
         self.text_color = text_color
-        self.img = self.font.render(self.text, True, self.text_color)    
+        self.img = self.font.render(self.text, True, self.text_color)
+    
+    @staticmethod
+    @lru_cache(256)
+    def load_font(name: str | Path, size: int) -> pygame.font.FontType:
+        return pygame.font.Font(name, size)
