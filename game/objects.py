@@ -52,7 +52,7 @@ class SpaceShip(Object2D):
     vel: tuple[number, number]
     collider: module_collider.BoxCollider
     shot_cooldown: int # Hiermit wird gezählt, wann wieder geschossen werden darf.
-    SHOT_COOLDOWN = 6 # Hiermit wird festgelegt, wie viel Zeit es zwischen Schüssen geben muss.
+    SHOT_COOLDOWN = 6 # Hiermit wird festgelegt, wie viel Zeit es zwischen Schüssen geben muss.#in consts übertragen
     shoot_sound: module_sound.Sound
     damage_sound: module_sound.Sound
     game_state: game_state.AndromedaClashGameState
@@ -150,6 +150,48 @@ class Projectile(Object2D):
         )
         self.collider.position = self.pos
 
+class PowerUp(Object2D):
+    '''
+    PowerUps verbessern die Eigenscahften des Raumschiffes oder machen die Rahmenbedingungen einfacher. Sie fallen senkrecht nach unten und müssen eingesammelt werden.
+    '''
+    pos: tuple[number, number]
+    vel: tuple[number, number]
+    size: number
+    type:str
+    collider: module_collider.CircleCollider
+
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], type:int):
+        self.pos = pos
+        self.vel = vel
+        self.type = consts.POWERUP_TYPES[type]
+        self.size = consts.POWERUP_HITBOX_RADIUS
+        self.collider = module_collider.CircleCollider(consts.POWERUP_HITBOX_RADIUS, pos)
+        self.color = consts.POWERUP_COLORS[consts.POWERUP_TYPES.index(self.type)] #In consts gibt es eien Liste für die Typen an PowerUps und eine für deren Farben. Hier wird dem PowerUp die Farbe mit dem gleichen Listenplatz (Index) zugewiesen.
+        #TODO soll die Frabe lieber in derselben liste wie Types sein und dann als...+1 aufgerufen werden?
+
+
+    def update(self):
+        if (self.pos[1] > consts.SCREEN_HEIGHT + self.size):
+            self.game_state.remove_object(self)
+        self.pos[1] += self.vel[1]
+        self.collider.position = self.pos
+        self.collision()
+
+    def collision(self):
+        if self.collider.collides(self.game_state.player.collider):
+
+            self.game_state.remove_object(self)
+
+    def draw(self, canvas):
+        pygame.draw.circle(canvas, self.color, self.pos, self.size, 4)
+
+    def set_pos(self, new_pos):
+        self.pos = new_pos
+    
+    def set_vel(self, new_vel):
+        self.vel = new_vel
+
+
 class Stone(Object2D):
     pos: tuple[number, number]
     vel: tuple[number, number]
@@ -162,6 +204,7 @@ class Stone(Object2D):
         self.size = consts.STONE_BASE_RADIUS * size
         self.collider = module_collider.CircleCollider(consts.STONE_BASE_HITBOX_RADIUS * size, pos)
         self.death_sound = module_sound.load_sound(consts.EXPLOSION_SOUND_PATH)
+        self.color = consts.STONE_COLOR
 
     def update(self):
         if (self.pos[1] > consts.SCREEN_HEIGHT + self.size):
@@ -188,8 +231,10 @@ class Stone(Object2D):
 
     def split_stone(self):
         '''
-        Wird ein Stein getroffen, teilt er sich in 2 kleinere auf. Beide fliegen gleich schnell nach unten und zur Seite. Jedoch einer nach rechts und einer nach links.
+        Wird ein Stein getroffen, teilt er sich in 2 kleinere auf. Beide fliegen gleich schnell nach unten und zur Seite. Jedoch einer nach rechts und einer nach links.        
         '''
+        
+        #Magic Numbers vermeiden, und Kommentare zu den Operationen
         weight_a = random.random() * 0.25 + 0.375
         vel_x = self.vel[0] * 2.5
         vel_y = self.vel[1] * 2.2
@@ -201,7 +246,7 @@ class Stone(Object2D):
         )
 
     def draw(self, canvas):
-        pygame.draw.circle(canvas, (0, 255, 0), self.pos, self.size, 4)
+        pygame.draw.circle(canvas, self.color, self.pos, self.size, 4)
 
     def set_pos(self, new_pos):
         self.pos = new_pos
@@ -209,6 +254,60 @@ class Stone(Object2D):
     def set_vel(self, new_vel):
         self.vel = new_vel
 
+
+class Enemy(Object2D):
+    pos: tuple[number, number]
+    vel: tuple[number, number]
+    collider: module_collider.BoxCollider
+    shot_cooldown: int
+
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], type: int):
+        self.pos = pos
+        self.vel = vel
+        self.type = type
+        self.size = [consts.ENEMY_HITBOX_WIDTH, consts.ENEMY_HITBOX_HEIGHT]
+        self.collider = module_collider.BoxCollider(consts.ENEMY_HITBOX_WIDTH, consts.ENEMY_HITBOX_HEIGHT, pos)
+        self.color = consts.ENEMY_COLOR
+        self.shot_cooldown = consts.ENEMY_SHOT_COOLDOWN
+
+    def update(self):
+        self.shot_cooldown -= 1
+        if (self.pos[1] > consts.SCREEN_HEIGHT + self.size[1]):
+            self.game_state.remove_object(self)
+        self.pos = (
+            (self.pos[0] + self.vel[0] + self.size[0]) % (consts.SCREEN_WIDTH + self.size[0] * 2) - self.size[0],
+            self.pos[1] + self.vel[1]
+        )
+        self.collider.position = self.pos
+        self.collision()
+        if self.shot_cooldown == 0:
+            projectile = Projectile(self.pos, (0, consts.PROJECTILE_SPEED), 0)
+            self.game_state.add_object(projectile)
+            self.shot_cooldown = consts.ENEMY_SHOT_COOLDOWN
+
+    def collision(self):
+        for g in self.game_state.current_objects:
+                if not isinstance(g, Projectile):
+                    continue
+                if self.collider.collides(g.collider):
+                    #self.lives -= g.damage
+                    self.game_state.remove_object(self)
+                    self.game_state.remove_object(g)
+                    self.game_state.score += 2
+                    self.game_state.update_score()
+
+    def draw(self, canvas):
+        pygame.draw.rect(canvas,self.color, 
+                         ((self.pos[0] - consts.SPACESHIP_WIDTH / 2, self.pos[1] - consts.SPACESHIP_HEIGHT / 2),
+                            (consts.SPACESHIP_WIDTH, consts.SPACESHIP_HEIGHT) # Größe
+                         )
+                         )
+        
+    def set_pos(self, new_pos):
+        self.pos = new_pos
+    
+    def set_vel(self, new_vel):
+        self.vel = new_vel
 
 class LiveDisplay(Object2D):
     image: Image

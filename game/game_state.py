@@ -42,9 +42,13 @@ class AndromedaClashGameState(GameStateType):
     fps: int # Bildrate
     player: objects.SpaceShip
     user_input: module_user_input.UserInputType
-    min_y_vel_stone = 0.5
-    max_vel_stone = 1
+    stonemin_y_vel: float
+    stone_max_vel: float
     stone_spawn_probability: float
+    enemy_min_y_vel: float
+    enemy_max_vel: float
+    enemy_spawn_probability: float
+    powerup_spawn_probability: float
     score: int
     highscore: int
     score_object: objects.Score
@@ -64,6 +68,12 @@ class AndromedaClashGameState(GameStateType):
         self.fps = 60
         self.user_input = user_input
         self.stone_spawn_probability = consts.START_STONE_SPAWNING_PROBABILITY
+        self.powerup_spawn_probability = consts.START_POWERUP_SPAWNING_PROBABILITY
+        self.enemy_spawn_probability = consts.START_ENEMY_SPAWNING_PROBABILITY
+        self.stone_min_y_vel = consts.STONE_STANDARD_MIN_Y_VEL
+        self.stone_max_vel = consts.STONE_STANDARD_MAX_VEL
+        self.enemy_min_y_vel = consts.ENEMY_STANDARD_MIN_Y_VEL
+        self.enemy_max_vel = consts.ENEMY_STANDARD_MAX_VEL
         
         self.highscore = 0
         
@@ -104,6 +114,8 @@ class AndromedaClashGameState(GameStateType):
                 if event.type == pygame.QUIT: # Falls Schliessen-Knopf gedruckt wird, wird das Programm beendet. 
                     running = False
             self.spawn_stone()
+            self.spawn_powerup()
+            self.spawn_enemy()
             for object2d in self.current_objects:
                 if not hasattr(object2d, "game_state"):
                     object2d.game_state = self
@@ -125,8 +137,8 @@ class AndromedaClashGameState(GameStateType):
     def spawn_stone(self):
         if random.random() < self.stone_spawn_probability: # Wahrscheinlichkeit. dass ein Stein entsteht
             
-            vel_y = self.min_y_vel_stone + random.random() * (self.max_vel_stone - self.min_y_vel_stone)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
-            vel_x = math.sqrt(self.max_vel_stone - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
+            vel_y = self.stone_min_y_vel + random.random() * (self.stone_max_vel - self.stone_min_y_vel)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
+            vel_x = math.sqrt(self.stone_max_vel - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
             vel = (vel_x, vel_y)
             size = random.choice(consts.STONE_SIZES)
             pos = (random.random()*GAME_SIZE[0], -consts.STONE_BASE_RADIUS * size)
@@ -134,6 +146,25 @@ class AndromedaClashGameState(GameStateType):
             self.add_object(objects.Stone(pos, vel, size))
         self.stone_spawn_probability += consts.STONE_SPAWNING_PROPABILITY_INCREASE / (1 + self.stone_spawn_probability * consts.STONE_SPAWNING_PROPABILITY_INCREASE_DECREASE)
     
+    def spawn_powerup(self):
+        if random.random() < self.powerup_spawn_probability:
+            pos = [random.random() * GAME_SIZE[0], -consts.POWERUP_HITBOX_RADIUS]
+            vel = consts.POWERUP_SPEED
+            type = random.randrange(0, len(consts.POWERUP_TYPES) + 1)
+            self.add_object(objects.PowerUp(pos, vel, type))
+        self.powerup_spawn_probability += consts.POWERUP_SPAWNING_PROPABILITY_INCREASE / (1 + self.powerup_spawn_probability * consts.POWERUP_SPAWNING_PROPABILITY_INCREASE_DECREASE)
+
+    def spawn_enemy(self):
+        if random.random() < self.enemy_spawn_probability: # Wahrscheinlichkeit. dass ein Stein entsteht
+            vel_y = self.enemy_min_y_vel + random.random() * (self.enemy_max_vel - self.enemy_min_y_vel)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
+            vel_x = math.sqrt(self.enemy_max_vel - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
+            vel = (vel_x, vel_y)
+            type = random.choice(consts.ENEMY_TYPES)
+            pos = (random.random()*GAME_SIZE[0], -consts.ENEMY_HEIGHT)
+            self.add_object(objects.Enemy(pos, vel, type))
+        self.enemy_spawn_probability += consts.ENEMY_SPAWNING_PROPABILITY_INCREASE / (1 + self.enemy_spawn_probability * consts.ENEMY_SPAWNING_PROPABILITY_INCREASE_DECREASE)
+    
+
     def game_over(self):
         self.remove_all_objects()
         if self.score > self.highscore:
