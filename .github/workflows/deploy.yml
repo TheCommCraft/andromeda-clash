@@ -55,7 +55,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2.0.8
         with:
-          name: ${{ matrix.channel }}
+          name: web.zip
           path: build/web.zip
         
       - uses: KikimoraGames/itch-publish@v0.0.3
