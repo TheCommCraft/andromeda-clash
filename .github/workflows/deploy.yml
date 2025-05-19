@@ -40,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web.zip
-          path: build/web.zip
+          path: ./build/web.zip
           if-no-files-found: error
   deploy:
     needs: build
@@ -61,6 +61,7 @@ jobs:
         with:
           file_path: ./build/web.zip
           extract_dir: ./build/web
+          verbose: true
       - uses: KikimoraGames/itch-publish@v0.0.3
         with:
           butlerApiKey: ${{ secrets.ITCH_IO_API_KEY }}
