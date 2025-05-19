@@ -1,6 +1,6 @@
 from __future__ import annotations # Das sorgt dafür, dass Typannotationen besser funktionieren.
 from abc import ABC, abstractmethod
-from typing import Literal
+from typing import Literal, Self
 import random
 from pathlib import Path
 from functools import lru_cache
@@ -61,6 +61,7 @@ class SpaceShip(Object2D):
     shoot_sound: module_sound.Sound
     damage_sound: module_sound.Sound
     game_state: game_state.AndromedaClashGameState
+    image: Image
     @property
     def lives(self) -> int:
         return self.game_state.lives
@@ -76,16 +77,10 @@ class SpaceShip(Object2D):
         self.shot_cooldown_timer = 0
         self.shoot_sound = module_sound.load_sound(consts.SHOOT_SOUND_PATH)
         self.damage_sound = module_sound.load_sound(consts.HIT_SOUND_PATH)
+        self.image = pygame.transform.scale(load_image(consts.SPACESHIP_IMAGE_PATH), (consts.SPACESHIP_WIDTH, consts.SPACESHIP_HEIGHT))
 
     def draw(self, canvas):
-        pygame.draw.rect(
-            canvas,
-            (255, 0, 0), # Farbenwerte werden als RGB-Tupel angegeben
-            (
-                (self.pos[0] - consts.SPACESHIP_WIDTH / 2, self.pos[1] - consts.SPACESHIP_HEIGHT / 2), # Position
-                (consts.SPACESHIP_WIDTH, consts.SPACESHIP_HEIGHT) # Größe
-            )
-        )
+        canvas.blit(self.image, (self.pos[0] - consts.SPACESHIP_WIDTH / 2, self.pos[1] - consts.SPACESHIP_HEIGHT / 2))
     
     def update(self):
         self.shot_cooldown_timer -= 1
@@ -113,7 +108,7 @@ class SpaceShip(Object2D):
         )
         if self.user_input.get_key_pressed(consts.key.SPACE) and self.shot_cooldown_timer <= 0:
             self.shot_cooldown_timer = self.shot_cooldown
-            projectile = Projectile(self.pos, (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
+            projectile = Projectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
             self.game_state.add_object(projectile)
             self.shoot_sound.play()
         self.collider.position = self.pos
@@ -135,6 +130,7 @@ class Projectile(Object2D):
     vel: tuple[number, number]
     direction: number
     collider: module_collider.BoxCollider
+    game_state: game_state.AndromedaClashGameState
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], direction: number, owner: ProjectileOwner):
         self.pos = pos
         self.vel = vel
@@ -161,7 +157,7 @@ class Projectile(Object2D):
 
 class PowerUp(Object2D):
     '''
-    PowerUps verbessern die Eigenscahften des Raumschiffes oder machen die Rahmenbedingungen einfacher. Sie fallen senkrecht nach unten und müssen eingesammelt werden.
+    PowerUps verbessern die Eigenschaften des Raumschiffes oder machen die Rahmenbedingungen einfacher. Sie fallen senkrecht nach unten und müssen eingesammelt werden.
     '''
     pos: tuple[number, number]
     vel: tuple[number, number]
@@ -169,13 +165,20 @@ class PowerUp(Object2D):
     type: str
     collider: module_collider.CircleCollider
     color: tuple[int, int, int]
+    end_time: float
+    effect_time: float
+    game_state: game_state.AndromedaClashGameState
 
-    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], color: tuple[int, int, int]):
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number]):
         self.pos = pos
         self.vel = vel
         self.size = consts.POWERUP_HITBOX_RADIUS
         self.collider = module_collider.CircleCollider(consts.POWERUP_HITBOX_RADIUS, pos)
-        self.color = color
+
+    @classmethod
+    @abstractmethod
+    def make_one(cls, pos: tuple[number, number], vel: tuple[number, number]) -> Self:
+        pass
        
     def update(self):
         if (self.pos[1] > consts.SCREEN_HEIGHT + self.size):
@@ -186,8 +189,7 @@ class PowerUp(Object2D):
 
     def collision(self):
         if self.collider.collides(self.game_state.player.collider):
-            self.activate_power()
-            self.game_state.remove_object(self)
+            self.game_state.activate_powerup(self)
 
     def draw(self, canvas):
         pygame.draw.circle(canvas, self.color, self.pos, self.size, 4)
@@ -199,6 +201,18 @@ class PowerUp(Object2D):
     @abstractmethod
     def deactivate_power(self):
         pass
+    
+    @abstractmethod
+    def update_activated(self):
+        pass
+    
+    @abstractmethod
+    def __eq__(self, value) -> bool: # Soll zurückgeben ob ein anderes Powerup äquivalent ist
+        pass
+    
+    @abstractmethod
+    def __gt__(self, value) -> bool: # Soll zurückgeben ob dieses Powerup ein anderes Powerup enthält.
+        pass
 
     def set_pos(self, new_pos):
         self.pos = new_pos
@@ -208,29 +222,52 @@ class PowerUp(Object2D):
 
 class SprayPowerUp(PowerUp):
     strength: int
+    effect_time = 10
+    color = (0, 0, 255)
 
-    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], color: tuple[int, int, int], strength: int = 1):
-        super().__init__(pos, vel, color)
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
+        super().__init__(pos, vel)
         self.strength = strength
 
-    def activate_power(self):
-        self.game_state.player.shot_cooldown *= 0.5
-    
-        
+    @classmethod
+    def make_one(cls, pos, vel):
+        return cls(pos, vel)
 
+    def activate_power(self):
+        self.game_state.player.shot_cooldown /= 2
+    
+    def deactivate_power(self):
+        self.game_state.player.shot_cooldown *= 2
+    
+    def update_activated(self):
+        pass
+
+    def __eq__(self, value):
+        if not isinstance(value, SprayPowerUp):
+            return False
+        return self.strength == value.strength
+    
+    def __gt__(self, value):
+        if not isinstance(value, SprayPowerUp):
+            return False
+        return self.strength > value.strength
 
 class InvincibilityPowerUp(PowerUp):
     strength: int
+    color = (0, 255, 0)
 
-    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], color: tuple[int, int, int], strength: int = 1):
-        super().__init__(pos, vel, color)
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
+        super().__init__(pos, vel)
         self.strength = strength
 
     def activate_power(self):
-        
         self.gamestate.lives
 
-        
+class DoublePointsPowerUp(PowerUp):
+    strength: int
+    color = (255, 0, 0)
+
+POWERUP_TYPES: list[type[PowerUp]] = [SprayPowerUp] 
 
 class Stone(Object2D):
     pos: tuple[number, number]
@@ -299,6 +336,7 @@ class Enemy(Object2D):
     vel: tuple[number, number]
     collider: module_collider.BoxCollider
     shot_cooldown: int
+    shot_sound: module_sound.Sound
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], type: int):
         self.pos = pos
@@ -308,6 +346,8 @@ class Enemy(Object2D):
         self.collider = module_collider.BoxCollider(consts.ENEMY_HITBOX_WIDTH, consts.ENEMY_HITBOX_HEIGHT, pos)
         self.color = consts.ENEMY_COLOR
         self.shot_cooldown = consts.ENEMY_SHOT_COOLDOWN
+        self.shot_sound = module_sound.load_sound(consts.SHOOT_SOUND_PATH)
+        self.damage_sound = module_sound.load_sound(consts.HIT_SOUND_PATH)
 
     def update(self):
         self.shot_cooldown -= 1
@@ -319,10 +359,11 @@ class Enemy(Object2D):
         )
         self.collider.position = self.pos
         self.collision()
-        if self.shot_cooldown == 0:
+        if self.shot_cooldown <= 0:
             projectile = Projectile(self.pos, (0, consts.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
             self.game_state.add_object(projectile)
             self.shot_cooldown = consts.ENEMY_SHOT_COOLDOWN
+            self.shot_sound.play()
 
     def collision(self):
         for g in self.game_state.current_objects:
@@ -330,19 +371,20 @@ class Enemy(Object2D):
                 continue
             if g.owner != ProjectileOwner.PLAYER:
                 continue
-            if self.collider.collides(g.collider):
-                #self.lives -= g.damage
-                self.game_state.remove_object(self)
-                self.game_state.remove_object(g)
-                self.game_state.score += 2
-                self.game_state.update_score()
+            if not self.collider.collides(g.collider):
+                continue
+            self.damage_sound.play()
+            self.game_state.remove_object(self)
+            self.game_state.remove_object(g)
+            self.game_state.score += 2
+            self.game_state.update_score()
 
     def draw(self, canvas):
         pygame.draw.rect(canvas,self.color, 
-                         ((self.pos[0] - consts.SPACESHIP_WIDTH / 2, self.pos[1] - consts.SPACESHIP_HEIGHT / 2),
-                            (consts.SPACESHIP_WIDTH, consts.SPACESHIP_HEIGHT) # Größe
-                         )
-                         )
+            ((self.pos[0] - consts.ENEMY_WIDTH / 2, self.pos[1] - consts.ENEMY_HEIGHT / 2),
+            (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT) # Größe
+            )
+        )
         
     def set_pos(self, new_pos):
         self.pos = new_pos

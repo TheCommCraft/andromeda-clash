@@ -17,15 +17,16 @@ class ReferenceToObject(Generic[T]):
     def __hash__(self) -> int:
         return hash(id(self.obj))
 
-class ObjectContainer:
-    objects: set[ReferenceToObject[module_objects.Object2D]]
-    def __init__(self, start_value: Iterable[module_objects.Object2D] = ()):
+O = TypeVar("O", bound="module_objects.Object2D")
+class ObjectContainerBase(Generic[O]):
+    objects: set[ReferenceToObject[O]]
+    def __init__(self, start_value: Iterable[O] = ()):
         self.objects = {ReferenceToObject(obj) for obj in start_value}
     
-    def add_object(self, value: module_objects.Object2D) -> None:
+    def add_object(self, value: O) -> None:
         self.objects.add(ReferenceToObject(value))
 
-    def remove_object(self, value: module_objects.Object2D) -> None:
+    def remove_object(self, value: O) -> None:
         if value not in self:
             return
         self.objects.remove(ReferenceToObject(value))
@@ -33,7 +34,7 @@ class ObjectContainer:
     def remove_all(self) -> None:
         self.objects.clear()
     
-    def __iter__(self) -> Iterator[module_objects.Object2D]:
+    def __iter__(self) -> Iterator[O]:
         return iter(obj.obj for obj in self.objects.copy())
     
     def __contains__(self, value: object) -> bool:
@@ -41,3 +42,6 @@ class ObjectContainer:
     
     def __len__(self) -> int:
         return len(self.objects)
+
+class ObjectContainer(ObjectContainerBase["module_objects.Object2D"]):
+    pass

@@ -3,14 +3,15 @@ from abc import ABC, abstractmethod
 from collections.abc import Collection
 from pathlib import Path
 import random
+import time
+import math
 import pygame
+from . import consts
 from . import objects
 from . import user_input as module_user_input
-from . import consts
 from . import data_structures
 from . import sound as module_sound
 from . import images as modules_images
-import math
 
 GAME_SIZE = (consts.SCREEN_WIDTH, consts.SCREEN_HEIGHT)
 imp = pygame.image.load(Path(__file__).parent / "images" / "lx5gafg9.png")
@@ -55,7 +56,7 @@ class AndromedaClashGameState(GameStateType):
     score_object: objects.Score
     lives_object: objects.LiveDisplay
     background_image: modules_images.Image
-    active_powerups: list[objects.PowerUp]
+    active_powerups: data_structures.ObjectContainerBase["objects.PowerUp"]
     
     @property
     def lives(self) -> int:
@@ -71,7 +72,7 @@ class AndromedaClashGameState(GameStateType):
         self.clock = pygame.time.Clock()
         self.fps = 60
         self.user_input = user_input
-        self.background_image = modules_images.load_image(consts.BACKGROUNG_IMAGE_PATH)
+        self.background_image = pygame.transform.scale(modules_images.load_image(consts.BACKGROUND_IMAGE_PATH), GAME_SIZE)
         
         self.highscore = 0
         
@@ -90,7 +91,7 @@ class AndromedaClashGameState(GameStateType):
         self.score_object = objects.Score(consts.POS_SCORE, "", consts.TEXT_SIZE_SCORE, consts.TEXT_COLOR_SCORE)
         self.update_score()
         self.add_object(self.score_object)
-        self.active_powerups = []
+        self.active_powerups = data_structures.ObjectContainer()
         
         self.lives_object = objects.LiveDisplay()
         self.add_object(self.lives_object)
@@ -109,6 +110,22 @@ class AndromedaClashGameState(GameStateType):
     
     def remove_all_objects(self):
         self.current_objects.remove_all()
+    
+    def activate_powerup(self, power_up: objects.PowerUp):
+        self.remove_object(power_up)
+        power_up.activate_power()
+        power_up.end_time = time.time() + power_up.effect_time
+        for other_power_up in self.active_powerups:
+            if power_up == other_power_up:
+                other_power_up.deactivate_power()
+                self.active_powerups.remove_object(other_power_up)
+                continue
+            if other_power_up > power_up:
+                return
+            if power_up > other_power_up:
+                other_power_up.deactivate_power()
+                self.active_powerups.remove_object(other_power_up)
+        self.active_powerups.add_object(power_up)
         
     def loop(self) -> None:
         running = True
@@ -136,6 +153,12 @@ class AndromedaClashGameState(GameStateType):
                 object2d.draw(self.canvas)
             for object2d in top_layered:
                 object2d.draw(self.canvas)
+            for power_up in self.active_powerups:
+                if power_up.end_time <= time.time():
+                    power_up.deactivate_power()
+                    self.active_powerups.remove_object(power_up)
+                    continue
+                power_up.update_activated()
             if self.user_input.get_key_down_now(consts.key.r):
                 self.start_game()
             pygame.display.update() # Änderungen werden umgesetzt.
@@ -156,13 +179,11 @@ class AndromedaClashGameState(GameStateType):
         self.stone_spawn_probability += consts.STONE_SPAWNING_PROPABILITY_INCREASE / (1 + self.stone_spawn_probability * consts.STONE_SPAWNING_PROPABILITY_INCREASE_DECREASE)
     
     def spawn_powerup(self):
-        return
         if random.random() < self.powerup_spawn_probability:
             pos = [random.random() * GAME_SIZE[0], -consts.POWERUP_HITBOX_RADIUS]
             vel = (0, consts.POWERUP_SPEED)
-            powerup_type = random.choice(consts.POWERUP_TYPES)
-            color = consts.POWERUP_COLORS.index(powerup_type)
-            self.add_object(powerup_type(pos, vel, color))
+            powerup_type = random.choice(objects.POWERUP_TYPES)
+            self.add_object(powerup_type(pos, vel))
         self.powerup_spawn_probability += consts.POWERUP_SPAWNING_PROPABILITY_INCREASE / (1 + self.powerup_spawn_probability * consts.POWERUP_SPAWNING_PROPABILITY_INCREASE_DECREASE)
 
     def spawn_enemy(self):
