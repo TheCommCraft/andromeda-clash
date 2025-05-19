@@ -56,9 +56,9 @@ class AsyncLoopTransformer(ast.NodeTransformer):
             )
 
             # 2. Add 'await asyncio.sleep(0)' after 'self.clock.tick(...)'
-            # This is specific to GameState.loop, others might just become async
+            # This is specific to AndromedaClashGameState.loop, others might just become async
             new_body = []
-            if self.class_name == "AndromedaClashGameState": # Only GameState has the clock.tick
+            if self.class_name == "AndromedaClashGameState": # Only AndromedaClashGameState has the clock.tick
                 while_loop = async_node.body[1]
                 if not isinstance(while_loop, ast.While):
                     return async_node
@@ -188,11 +188,6 @@ if __name__ == "__main__":
     GAME_STATE_FILE = "game/game_state.py"
     ANDROMEDA_CLASH_GAME_STATE_FILE = "game/game_state.py"
     MAIN_PY_FILE = "main.py"
-
-    # --- IMPORTANT: Add import asyncio to GameState.py if it's not there ---
-    # The AsyncLoopTransformer adds `await asyncio.sleep(0)` which requires `asyncio` to be imported.
-    # We'll do a simple text check and prepend if necessary, as AST for this is a bit more involved for just one import.
-    # Or, better, let's also do this with AST for consistency.
 
 
     # 1. Modify GameState.loop
