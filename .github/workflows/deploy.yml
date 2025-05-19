@@ -55,17 +55,20 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: web.zip
-          path: ./build/web.zip
+          path: ./web.zip
+      - name: Test
+        run: |
+          ls
       - name: Extract zip
         uses: ihiroky/extract-action@v1
         with:
-          file_path: ./build/web.zip
-          extract_dir: ./build/web
+          file_path: ./web.zip
+          extract_dir: ./web
           verbose: true
       - uses: KikimoraGames/itch-publish@v0.0.3
         with:
           butlerApiKey: ${{ secrets.ITCH_IO_API_KEY }}
-          gameData: ./build/web
+          gameData: ./web
           itchUsername: ${{ env.ITCH_USERNAME }}
           itchGameId: ${{ env.ITCH_GAME_ID }}
           buildChannel: web.zip
