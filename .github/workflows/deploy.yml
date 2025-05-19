@@ -62,13 +62,13 @@ jobs:
       - name: Extract zip
         uses: ihiroky/extract-action@v1
         with:
-          file_path: ./web.zip
-          extract_dir: ./web
+          file_path: web.zip
+          extract_dir: web
           verbose: true
       - uses: KikimoraGames/itch-publish@v0.0.3
         with:
           butlerApiKey: ${{ secrets.ITCH_IO_API_KEY }}
-          gameData: ./web
+          gameData: web
           itchUsername: ${{ env.ITCH_USERNAME }}
           itchGameId: ${{ env.ITCH_GAME_ID }}
           buildChannel: web.zip
