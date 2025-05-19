@@ -53,10 +53,10 @@ jobs:
           - windows
           - webgl
     steps:
-      - uses: actions/download-artifact@v2.0.8
+      - uses: actions/download-artifact@v3
         with:
           name: web.zip
-          path: build/web.zip
+          path: ./build/web.zip
         
       - uses: KikimoraGames/itch-publish@v0.0.3
         with:
