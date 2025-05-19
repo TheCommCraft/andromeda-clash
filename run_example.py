@@ -1,5 +1,4 @@
 import pygame
-from game.objects import SpaceShip
 from game.game_state import AndromedaClashGameState, GAME_SIZE
 from game.user_input import UserInput
 

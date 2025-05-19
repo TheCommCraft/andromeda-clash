@@ -1,6 +1,7 @@
-from .user_input import KeyboardKey as key
 from enum import Flag, auto
 from pathlib import Path
+from .user_input import KeyboardKey as key
+#from .objects import SprayPowerUp
 
 SPACESHIP_WIDTH = 20
 SPACESHIP_HEIGHT = 20
@@ -8,12 +9,13 @@ SPACESHIP_HITBOX_WIDTH = SPACESHIP_WIDTH
 SPACESHIP_HITBOX_HEIGHT = SPACESHIP_HEIGHT
 SPACESHIP_INERTIA_FACTOR = 0.9
 SPACESHIP_ACCELERATION = 1.2
+SPACESHIP_SHOT_COOLDOWN = 6
 
 STONE_SIZES = [2, 3, 4]
 STONE_BASE_RADIUS = 12
 STONE_BASE_HITBOX_RADIUS = STONE_BASE_RADIUS
-STONE_STANDARD_MIN_Y_VEL = 0.5
-STONE_STANDARD_MAX_VEL = 1
+STONE_STANDARD_MIN_Y_VEL = 0.2
+STONE_STANDARD_MAX_VEL = 0.4
 STONE_COLOR = (0, 255, 0)
 
 ENEMY_WIDTH = 15
@@ -34,8 +36,8 @@ PROJECTILE_SPEED = 8
 
 POWERUP_HITBOX_RADIUS = 12
 POWERUP_SPEED = 2
-POWERUP_TYPES = ['decrease_stone_speed', 'decrease_player_size', 'decrease_stone_size', 'increase_fire_rate'] #Jedes PowerUp wird hier festgelegt. Die Liste kann beliebig erweitewrt werden.
-POWERUP_COLORS = [(1, 1, 1), (2, 2, 2), (3, 3, 3), (4, 4, 4)]
+POWERUP_TYPES = []#[SprayPowerUp, InvincibilityPowerUp, DoublePointsPowerUp]#, SlowDownPowerUp, MultiShotPowerUp, PiercingPowerUp] # Jedes PowerUp wird hier festgelegt. Die Liste kann beliebig erweitewrt werden.
+POWERUP_COLORS = [(100, 100, 100), (2, 2, 2), (3, 3, 3), (4, 4, 4), (4, 4, 4), (4, 4, 4)]
 
 
 SCREEN_WIDTH = 600
@@ -67,17 +69,18 @@ GAME_OVER_LINE_HEIGHT = 24
 # Paths
 
 GAME_PATH = Path(__file__).parent
-IMAGES_PATH = Path(GAME_PATH, "images")
-SOUNDS_PATH = Path(GAME_PATH, "sounds")
-FONTS_PATH = Path(GAME_PATH, "fonts")
+IMAGES_PATH = GAME_PATH / "images"
+SOUNDS_PATH = GAME_PATH / "sounds"
+FONTS_PATH = GAME_PATH / "fonts"
 
-HEART_IMAGE_PATH = Path(IMAGES_PATH, "heart.png")
+HEART_IMAGE_PATH = IMAGES_PATH / "heart.png"
+BACKGROUNG_IMAGE_PATH = IMAGES_PATH / "background.jpg"
 
-SHOOT_SOUND_PATH = Path(SOUNDS_PATH, "shoot.wav")
-HIT_SOUND_PATH = Path(SOUNDS_PATH, "hit.wav")
-EXPLOSION_SOUND_PATH = Path(SOUNDS_PATH, "explosion.wav")
+SHOOT_SOUND_PATH = SOUNDS_PATH / "shoot.wav"
+HIT_SOUND_PATH = SOUNDS_PATH / "hit.wav"
+EXPLOSION_SOUND_PATH = SOUNDS_PATH / "explosion.wav"
 
-FONT_NAME = Path(FONTS_PATH, "8bitoperator_jve.ttf")
+FONT_NAME = FONTS_PATH / "8bitoperator_jve.ttf"
 
 # Unique message values
 

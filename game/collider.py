@@ -83,3 +83,10 @@ class PolyPositionedCollider(PositionedCollider):
             if collider.collides(other):
                 return True
         return False
+
+class EmptyCollider(PositionedCollider):
+    def __init__(self, position: tuple[number, number] = (0, 0)):
+        self.position = position
+        
+    def collides(self, other):
+        return False
