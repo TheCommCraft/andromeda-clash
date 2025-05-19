@@ -1,0 +1,68 @@
+name: Build Async Web Version
+
+on:
+  push:
+    branches:
+      - main # Or your default branch
+  workflow_dispatch: # Allows manual triggering
+env:
+  ITCH_USERNAME: thecommcraft
+  ITCH_GAME_ID: andromeda-clash
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pygame
+
+      - name: Run modification script
+        run: python workflow.py
+
+      - name: Set up Emscripten (via pygbag)
+        run: |
+          pip install pygbag
+
+      - name: Build web package with pygbag
+        run: |
+          python -m pygbag --archive .
+    
+      - name: Upload web.zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web.zip
+          path: build/web.zip
+          if-no-files-found: error
+  deploy:
+    needs: build
+    name: Upload to Itch
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        channel:
+          - windows
+          - webgl
+    steps:
+      - uses: actions/download-artifact@v2.0.8
+        with:
+          name: ${{ matrix.channel }}
+          path: build/web.zip
+        
+      - uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{ secrets.ITCH_IO_API_KEY }}
+          gameData: ./build/web.zip
+          itchUsername: ${{ env.ITCH_USERNAME }}
+          itchGameId: ${{ env.ITCH_GAME_ID }}
+          buildChannel: web.zip
+          buildNumber: ${{ needs.version.outputs.version_hash }}
