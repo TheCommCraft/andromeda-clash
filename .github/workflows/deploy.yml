@@ -61,7 +61,7 @@ jobs:
           ls
       - name: Extract zip
         run: |
-          unzip web.zip
+          unzip ./web.zip
       - uses: KikimoraGames/itch-publish@v0.0.3
         with:
           butlerApiKey: ${{ secrets.ITCH_IO_API_KEY }}
