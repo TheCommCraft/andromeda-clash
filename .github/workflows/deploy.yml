@@ -10,7 +10,7 @@ env:
   ITCH_GAME_ID: andromeda-clash
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
