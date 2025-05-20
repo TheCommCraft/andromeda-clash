@@ -28,11 +28,11 @@ jobs:
       - name: Run modification script
         run: |
           python workflow.py
-          cat game/game_state.py
-          cat main.py
 
       - name: Set up Emscripten (via pygbag)
         run: |
+          cat game/game_state.py
+          cat main.py
           pip install pygbag
 
       - name: Build web package with pygbag
@@ -43,7 +43,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web.zip
-          path: ./build/web.zip
+          path: ./build/web
           if-no-files-found: error
   deploy:
     needs: build
@@ -60,11 +60,10 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: web.zip
-          path: ./build
+          path: ./web
       - name: Extract zip
         run: |
-          ls build
-          unzip -o ./build/web.zip -d ./web
+          ls .
       - uses: KikimoraGames/itch-publish@v0.0.3
         with:
           butlerApiKey: ${{ secrets.ITCH_IO_API_KEY }}
