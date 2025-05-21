@@ -147,7 +147,7 @@ class Projectile(Object2D):
         consts.PROJECTILE_WIDTH)
     
     def update(self):
-        if self.pos[1] < -50:
+        if self.pos[1] > consts.SCREEN_HEIGHT + consts.PROJECTILE_HEIGHT / 2 or self.pos[1] < -consts.PROJECTILE_HEIGHT / 2:
             self.game_state.remove_object(self)
         self.pos = (
             self.pos[0] + self.vel[0],
@@ -284,8 +284,9 @@ class Stone(Object2D):
         self.color = consts.STONE_COLOR
 
     def update(self):
-        if (self.pos[1] > consts.SCREEN_HEIGHT + self.size):
+        if self.pos[1] > consts.SCREEN_HEIGHT + self.size or self.pos[1] < -self.size:
             self.game_state.remove_object(self)
+            return
         self.pos = (
             (self.pos[0] + self.vel[0] + self.size) % (consts.SCREEN_WIDTH + self.size * 2) - self.size,
             self.pos[1] + self.vel[1]
