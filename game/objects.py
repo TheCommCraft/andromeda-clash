@@ -465,3 +465,4 @@ class Text(Object2D):
 class Score(Text):
     def get_draw_details(self):
         return consts.DrawDetails.TOP_LAYER
+    
