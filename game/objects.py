@@ -62,6 +62,8 @@ class SpaceShip(Object2D):
     damage_sound: module_sound.Sound
     game_state: game_state.AndromedaClashGameState
     image: Image
+    invincible: bool
+
     @property
     def lives(self) -> int:
         return self.game_state.lives
@@ -78,8 +80,11 @@ class SpaceShip(Object2D):
         self.shoot_sound = module_sound.load_sound(consts.SHOOT_SOUND_PATH)
         self.damage_sound = module_sound.load_sound(consts.HIT_SOUND_PATH)
         self.image = pygame.transform.scale(load_image(consts.SPACESHIP_IMAGE_PATH), (consts.SPACESHIP_WIDTH, consts.SPACESHIP_HEIGHT))
+        self.invincible = False
 
     def draw(self, canvas):
+        if self.invincible:
+            pygame.draw.circle(canvas, consts.SPACESHIP_SHIELD_COLOR, self.pos, consts.SPACESHIP_HEIGHT / 2)
         canvas.blit(self.image, (self.pos[0] - consts.SPACESHIP_WIDTH / 2, self.pos[1] - consts.SPACESHIP_HEIGHT / 2))
     
     def update(self):
@@ -112,17 +117,18 @@ class SpaceShip(Object2D):
             self.game_state.add_object(projectile)
             self.shoot_sound.play()
         self.collider.position = self.pos
-        for obj in self.game_state.current_objects:
-            if not isinstance(obj, Stone) and not isinstance(obj, Projectile) and not isinstance(obj, Enemy):
-                continue
-            if obj.collider.collides(self.collider):
-                if isinstance(obj, Projectile) and obj.owner != ProjectileOwner.ENEMY:
+        if not self.invincible:
+            for obj in self.game_state.current_objects:
+                if not isinstance(obj, Stone) and not isinstance(obj, Projectile) and not isinstance(obj, Enemy):
                     continue
-                self.lives -= 1
-                self.damage_sound.play()
-                self.game_state.remove_object(obj)
-                if self.lives <= 0:
-                    self.game_state.game_over()
+                if obj.collider.collides(self.collider):
+                    if isinstance(obj, Projectile) and obj.owner != ProjectileOwner.ENEMY:
+                        continue
+                    self.lives -= 1
+                    self.damage_sound.play()
+                    self.game_state.remove_object(obj)
+                    if self.lives <= 0:
+                        self.game_state.game_over()
 
 class Projectile(Object2D):
     owner: ProjectileOwner
@@ -254,6 +260,7 @@ class SprayPowerUp(PowerUp):
 
 class InvincibilityPowerUp(PowerUp):
     strength: int
+    effect_time = 10
     color = (0, 255, 0)
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
@@ -261,19 +268,70 @@ class InvincibilityPowerUp(PowerUp):
         self.strength = strength
 
     def activate_power(self):
-        self.gamestate.lives
+        self.game_state.player.invincible = True
+
+    def deactivate_power(self):
+        self.game_state.player.invincible = False
+
+    @classmethod
+    def make_one(cls, pos, vel):
+        return cls(pos, vel)
+    
+    def update_activated(self):
+        pass
+
+    def __eq__(self, value):
+        if not isinstance(value, InvincibilityPowerUp):
+            return False
+        return self.strength == value.strength
+    
+    def __gt__(self, value):
+        if not isinstance(value, InvincibilityPowerUp):
+            return False
+        return self.strength > value.strength
 
 class DoublePointsPowerUp(PowerUp):
     strength: int
+    effect_time = 10
     color = (255, 0, 0)
 
-POWERUP_TYPES: list[type[PowerUp]] = [SprayPowerUp] 
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
+        super().__init__(pos, vel)
+        self.strength = strength
+
+    def activate_power(self):
+        pass #game_state.player.po
+#ymene ieb.rpstne dnu nrenä nnad sad ,llikrepstn
+
+    def deactivate_power(self):
+        self.game_state.player.invincible = False
+
+    @classmethod
+    def make_one(cls, pos, vel):
+        return cls(pos, vel)
+    
+    def update_activated(self):
+        pass
+
+    def __eq__(self, value):
+        if not isinstance(value, InvincibilityPowerUp):
+            return False
+        return self.strength == value.strength
+    
+    def __gt__(self, value):
+        if not isinstance(value, InvincibilityPowerUp):
+            return False
+        return self.strength > value.strength
+
+POWERUP_TYPES: list[type[PowerUp]] = [SprayPowerUp, InvincibilityPowerUp] # Ansonsten funnktioniert es nicht. (wenn nicht in dieser Datei)
 
 class Stone(Object2D):
     pos: tuple[number, number]
     vel: tuple[number, number]
     collider: module_collider.CircleCollider
     death_sound: module_sound.Sound
+    lives: int
+    health_bar: HealthBar
     
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], size: Literal[1, 2, 3, 4]):
         self.pos = pos
@@ -281,7 +339,9 @@ class Stone(Object2D):
         self.size = consts.STONE_BASE_RADIUS * size
         self.collider = module_collider.CircleCollider(consts.STONE_BASE_HITBOX_RADIUS * size, pos)
         self.death_sound = module_sound.load_sound(consts.EXPLOSION_SOUND_PATH)
+        self.lives = consts.STONE_LIVES
         self.color = consts.STONE_COLOR
+        self.health_bar = HealthBar(self.pos, self.lives, self.lives)
 
     def update(self):
         if (self.pos[1] > consts.SCREEN_HEIGHT + self.size):
@@ -297,14 +357,20 @@ class Stone(Object2D):
         for g in self.game_state.current_objects:
             if not isinstance(g, Projectile):
                 continue
-            if self.collider.collides(g.collider):
+            elif self.collider.collides(g.collider):
+                self.game_state.remove_object(g)
+                self.lives -= consts.SPACESHIP_DAMAGE
+                self.health_bar.lives = self.lives
+                if self.lives > 0:
+                    continue
                 if self.size / consts.STONE_BASE_RADIUS >= consts.STONE_SIZES[1]:
                     self.split_stone()
                 self.game_state.remove_object(self)
-                self.game_state.remove_object(g)
                 self.death_sound.play()
-                self.game_state.score += 1
+                if g.owner != ProjectileOwner.ENEMY:
+                    self.game_state.score += 1
                 self.game_state.update_score()
+
 
     def split_stone(self):
         '''
@@ -323,6 +389,9 @@ class Stone(Object2D):
         )
 
     def draw(self, canvas):
+        if self.health_bar.lives < self.health_bar.max_lives:
+            self.health_bar.pos = (self.pos[0], self.pos[1] - self.size - consts.HEALTH_BAR_HEIGHT - 2)
+            self.health_bar.draw(canvas)
         pygame.draw.circle(canvas, self.color, self.pos, self.size, 4)
 
     def set_pos(self, new_pos):
@@ -331,23 +400,35 @@ class Stone(Object2D):
     def set_vel(self, new_vel):
         self.vel = new_vel
 
+
 class Enemy(Object2D):
     pos: tuple[number, number]
     vel: tuple[number, number]
     collider: module_collider.BoxCollider
     shot_cooldown: int
     shot_sound: module_sound.Sound
+    lives: int
+    image: Image
+    health_bar: HealthBar
 
-    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], type: int):
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], __type: int):
         self.pos = pos
         self.vel = vel
-        self.type = type
+        self.type = __type
         self.size = [consts.ENEMY_HITBOX_WIDTH, consts.ENEMY_HITBOX_HEIGHT]
         self.collider = module_collider.BoxCollider(consts.ENEMY_HITBOX_WIDTH, consts.ENEMY_HITBOX_HEIGHT, pos)
-        self.color = consts.ENEMY_COLOR
+        self.color = consts.ENEMY_COLOR[0]
         self.shot_cooldown = consts.ENEMY_SHOT_COOLDOWN
         self.shot_sound = module_sound.load_sound(consts.SHOOT_SOUND_PATH)
         self.damage_sound = module_sound.load_sound(consts.HIT_SOUND_PATH)
+        self.lives = consts.ENEMY_LIVES
+        self.image = pygame.transform.flip(
+            pygame.transform.scale(
+                load_image(consts.ENEMY_IMAGE_PATH), (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT)
+            ),
+            False, True
+        )
+        self.health_bar = HealthBar(self.pos, self.lives, self.lives)
 
     def update(self):
         self.shot_cooldown -= 1
@@ -367,24 +448,29 @@ class Enemy(Object2D):
 
     def collision(self):
         for g in self.game_state.current_objects:
-            if not isinstance(g, Projectile):
+            if not isinstance(g, Projectile) and not isinstance(g, Stone):
                 continue
-            if g.owner != ProjectileOwner.PLAYER:
+            if isinstance(g, Projectile) and g.owner != ProjectileOwner.PLAYER:
                 continue
             if not self.collider.collides(g.collider):
                 continue
+            
+            self.game_state.remove_object(g)
+            self.lives = self.lives - consts.SPACESHIP_DAMAGE
+            if self.lives > 0:
+                self.health_bar.lives = self.lives
+                self.damage_sound.play()
+                continue
+
             self.damage_sound.play()
             self.game_state.remove_object(self)
-            self.game_state.remove_object(g)
             self.game_state.score += 2
             self.game_state.update_score()
 
     def draw(self, canvas):
-        pygame.draw.rect(canvas,self.color, 
-            ((self.pos[0] - consts.ENEMY_WIDTH / 2, self.pos[1] - consts.ENEMY_HEIGHT / 2),
-            (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT) # Größe
-            )
-        )
+        self.health_bar.pos = (self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.HEALTH_BAR_HEIGHT - 2)
+        self.health_bar.draw(canvas)
+        canvas.blit(self.image, (self.pos[0] - consts.ENEMY_WIDTH / 2, self.pos[1] - consts.ENEMY_HEIGHT / 2))
         
     def set_pos(self, new_pos):
         self.pos = new_pos
@@ -420,13 +506,13 @@ class Text(Object2D):
     BLUE = (0, 0, 255)
     GRAY = (200, 200, 200)
     img: SurfaceType
-    pos: tuple[float, float]
+    pos: tuple[number, number]
     text: str
     text_color: tuple[int, int, int]
     text_size: int
     font: pygame.font.FontType
     
-    def __init__(self, pos: tuple[float, float], text: str, text_size: int, text_color: tuple[int, int, int]):
+    def __init__(self, pos: tuple[number, number], text: str, text_size: int, text_color: tuple[int, int, int]):
         self.pos = pos
         self.set_all(text, text_size, text_color)
         
@@ -465,3 +551,26 @@ class Text(Object2D):
 class Score(Text):
     def get_draw_details(self):
         return consts.DrawDetails.TOP_LAYER
+
+
+class HealthBar(Object2D):
+    max_lives: int
+    lives: int
+    pos: tuple[number, number]
+    height: int
+    width: int
+    
+    def __init__(self, pos: tuple[number, number], lives: int, max_lives: int):
+        self.pos = pos
+        self.lives = lives
+        self.max_lives = max_lives
+
+    def update(self):
+        pass
+
+    def draw(self, canvas):
+        pos_x = self.pos[0]
+        pos_y = self.pos[1]
+        pygame.draw.rect(canvas, consts.HEALTH_BAR_BACKGROUND_COLOR, (pos_x - consts.HEALTH_BAR_WIDTH / 2, pos_y, consts.HEALTH_BAR_WIDTH, consts.HEALTH_BAR_HEIGHT))
+        pygame.draw.rect(canvas, consts.HEALTH_BAR_COLOR, (pos_x - consts.HEALTH_BAR_WIDTH / 2, pos_y, consts.HEALTH_BAR_WIDTH * (self.lives / self.max_lives), consts.HEALTH_BAR_HEIGHT))
+        
