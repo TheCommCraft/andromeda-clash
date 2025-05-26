@@ -54,9 +54,10 @@ class AndromedaClashGameState(GameStateType):
     score: int
     highscore: int
     score_object: objects.Score
-    lives_object: objects.LiveDisplay
+    lives_object: objects.LifeDisplay
     background_image: modules_images.Image
     active_powerups: data_structures.ObjectContainerBase["objects.PowerUp"]
+    
     
     @property
     def lives(self) -> int:
@@ -79,6 +80,10 @@ class AndromedaClashGameState(GameStateType):
         self.start_game()
     
     def start_game(self):
+        if hasattr(self, "active_powerups"):
+            for power_up in self.active_powerups:
+                power_up.deactivate_power()
+                power_up.activated = False
         self.stone_min_y_vel = consts.STONE_STANDARD_MIN_Y_VEL
         self.stone_max_vel = consts.STONE_STANDARD_MAX_VEL
         self.enemy_min_y_vel = consts.ENEMY_STANDARD_MIN_Y_VEL
@@ -93,7 +98,7 @@ class AndromedaClashGameState(GameStateType):
         self.add_object(self.score_object)
         self.active_powerups = data_structures.ObjectContainer()
         
-        self.lives_object = objects.LiveDisplay()
+        self.lives_object = objects.LifeDisplay()
         self.add_object(self.lives_object)
         
         self.add_player()
@@ -113,18 +118,21 @@ class AndromedaClashGameState(GameStateType):
     
     def activate_powerup(self, power_up: objects.PowerUp):
         self.remove_object(power_up)
-        power_up.activate_power()
-        power_up.end_time = time.time() + power_up.effect_time
         for other_power_up in self.active_powerups:
             if power_up == other_power_up:
                 other_power_up.deactivate_power()
+                other_power_up.activated = False
                 self.active_powerups.remove_object(other_power_up)
                 continue
             if other_power_up > power_up:
                 return
             if power_up > other_power_up:
                 other_power_up.deactivate_power()
+                other_power_up.activated = False
                 self.active_powerups.remove_object(other_power_up)
+        power_up.activate_power()
+        power_up.end_time = time.time() + power_up.effect_time
+        power_up.activated = True
         self.active_powerups.add_object(power_up)
         
     def loop(self) -> None:
@@ -156,6 +164,7 @@ class AndromedaClashGameState(GameStateType):
             for power_up in self.active_powerups:
                 if power_up.end_time <= time.time():
                     power_up.deactivate_power()
+                    power_up.activated = False
                     self.active_powerups.remove_object(power_up)
                     continue
                 power_up.update_activated()

@@ -2,6 +2,7 @@ from __future__ import annotations # Das sorgt dafür, dass Typannotationen bess
 from abc import ABC, abstractmethod
 from typing import Literal, Self
 import random
+import time
 from pathlib import Path
 from functools import lru_cache
 from enum import Enum
@@ -11,6 +12,7 @@ from . import game_state # Das "." sorgt für einen relativen Import also einen 
 from . import sound as module_sound
 from . import collider as module_collider
 from . import consts
+from . import data_structures
 from .images import load_image, Image
 # Das ist ein Kommentar, er wird nicht als Code interpretiert.
 
@@ -63,6 +65,10 @@ class SpaceShip(Object2D):
     game_state: game_state.AndromedaClashGameState
     image: Image
     invincible: bool
+    point_multiplier: int
+    damage_multiplier: int
+    piercing: bool
+    multishot: bool
 
     @property
     def lives(self) -> int:
@@ -81,6 +87,10 @@ class SpaceShip(Object2D):
         self.damage_sound = module_sound.load_sound(consts.HIT_SOUND_PATH)
         self.image = pygame.transform.scale(load_image(consts.SPACESHIP_IMAGE_PATH), (consts.SPACESHIP_WIDTH, consts.SPACESHIP_HEIGHT))
         self.invincible = False
+        self.point_multiplier = 1
+        self.damage_multiplier = 1
+        self.piercing = False
+        self.multishot = False
 
     def draw(self, canvas):
         if self.invincible:
@@ -113,20 +123,41 @@ class SpaceShip(Object2D):
         )
         if self.user_input.get_key_pressed(consts.key.SPACE) and self.shot_cooldown_timer <= 0:
             self.shot_cooldown_timer = self.shot_cooldown
-            projectile = Projectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
-            self.game_state.add_object(projectile)
+            if not self.multishot:
+                projectile = \
+                    PiercingProjectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER) \
+                    if self.piercing else \
+                    Projectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
+                self.game_state.add_object(projectile)
+            else:
+                #Die Projektile müssen noch schrägfliegend gemacht werden.
+                projectile_1 = \
+                    PiercingProjectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER) \
+                    if self.piercing else \
+                    Projectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
+                projectile_2 = \
+                    PiercingProjectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER) \
+                    if self.piercing else \
+                    Projectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
+                self.game_state.add_object(projectile_1)
+                self.game_state.add_object(projectile_2)
             self.shoot_sound.play()
         self.collider.position = self.pos
         if not self.invincible:
             for obj in self.game_state.current_objects:
                 if not isinstance(obj, Stone) and not isinstance(obj, Projectile) and not isinstance(obj, Enemy):
                     continue
+                if isinstance(obj, PiercingProjectile) and obj.has_hit_enemy(Object2D):
+                    continue
                 if obj.collider.collides(self.collider):
                     if isinstance(obj, Projectile) and obj.owner != ProjectileOwner.ENEMY:
                         continue
                     self.lives -= 1
                     self.damage_sound.play()
-                    self.game_state.remove_object(obj)
+                    if isinstance(obj, PiercingProjectile):
+                        obj.register_enemy(self)
+                    else:
+                        self.game_state.remove_object(obj)
                     if self.lives <= 0:
                         self.game_state.game_over()
 
@@ -161,6 +192,24 @@ class Projectile(Object2D):
         )
         self.collider.position = self.pos
 
+class PiercingProjectile(Projectile):
+    _hit_enemies: data_structures.ObjectDict[float]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._hit_enemies = data_structures.ObjectDict()
+    
+    def register_enemy(self, enemy: Object2D):
+        self._hit_enemies[enemy] = time.time() + consts.PIERCING_PROJECTILE_ENEMY_COOLDOWN
+    
+    def _clean(self):
+        for obj, __time in self._hit_enemies.items():
+            if __time < time.time():
+                self._hit_enemies.pop(obj)
+    
+    def has_hit_enemy(self, enemy: Object2D):
+        self._clean()
+        return enemy in self._hit_enemies
+
 class PowerUp(Object2D):
     '''
     PowerUps verbessern die Eigenschaften des Raumschiffes oder machen die Rahmenbedingungen einfacher. Sie fallen senkrecht nach unten und müssen eingesammelt werden.
@@ -174,6 +223,7 @@ class PowerUp(Object2D):
     end_time: float
     effect_time: float
     game_state: game_state.AndromedaClashGameState
+    activated: bool = False
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number]):
         self.pos = pos
@@ -225,6 +275,12 @@ class PowerUp(Object2D):
     
     def set_vel(self, new_vel):
         self.vel = new_vel
+    
+    def __del__(self):
+        if not self.activated:
+            return
+        self.deactivate_power()
+        self.activated = False
 
 class SprayPowerUp(PowerUp):
     strength: int
@@ -300,11 +356,10 @@ class DoublePointsPowerUp(PowerUp):
         self.strength = strength
 
     def activate_power(self):
-        pass #game_state.player.po
-#ymene ieb.rpstne dnu nrenä nnad sad ,llikrepstn
+        self.game_state.player.point_multiplier += 1
 
     def deactivate_power(self):
-        self.game_state.player.invincible = False
+        self.game_state.player.point_multiplier -= 1
 
     @classmethod
     def make_one(cls, pos, vel):
@@ -314,16 +369,82 @@ class DoublePointsPowerUp(PowerUp):
         pass
 
     def __eq__(self, value):
-        if not isinstance(value, InvincibilityPowerUp):
+        if not isinstance(value, DoublePointsPowerUp):
             return False
         return self.strength == value.strength
     
     def __gt__(self, value):
-        if not isinstance(value, InvincibilityPowerUp):
+        if not isinstance(value, DoublePointsPowerUp):
+            return False
+        return self.strength > value.strength
+    
+class DoubleDamagePowerUp(PowerUp):
+    strength: int
+    effect_time = 10
+    color = (200, 55, 100)
+
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
+        super().__init__(pos, vel)
+        self.strength = strength
+
+    def activate_power(self):
+        self.game_state.player.damage_multiplier += 1
+
+    def deactivate_power(self):
+        self.game_state.player.damage_multiplier -= 1
+
+    @classmethod
+    def make_one(cls, pos, vel):
+        return cls(pos, vel)
+    
+    def update_activated(self):
+        pass
+
+    def __eq__(self, value):
+        if not isinstance(value, DoubleDamagePowerUp):
+            return False
+        return self.strength == value.strength
+    
+    def __gt__(self, value):
+        if not isinstance(value, DoubleDamagePowerUp):
             return False
         return self.strength > value.strength
 
-POWERUP_TYPES: list[type[PowerUp]] = [SprayPowerUp, InvincibilityPowerUp] # Ansonsten funnktioniert es nicht. (wenn nicht in dieser Datei)
+class StrikePowerUp(PowerUp):
+    strength: int
+    effect_time = 10
+    color = (0, 255, 255)
+
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
+        super().__init__(pos, vel)
+        self.strength = strength
+
+    def activate_power(self):
+        if type(self.game_state.player) == SpaceShip:
+            self.game_state.player.piercing = True
+
+    def deactivate_power(self):
+        if type(self.game_state.player) == SpaceShip:
+            self.game_state.player.piercing = False
+
+    @classmethod
+    def make_one(cls, pos, vel):
+        return cls(pos, vel)
+    
+    def update_activated(self):
+        pass
+
+    def __eq__(self, value):
+        if not isinstance(value, StrikePowerUp):
+            return False
+        return self.strength == value.strength
+    
+    def __gt__(self, value):
+        if not isinstance(value, StrikePowerUp):
+            return False
+        return self.strength > value.strength
+
+POWERUP_TYPES: list[type[PowerUp]] = [SprayPowerUp, InvincibilityPowerUp, DoublePointsPowerUp, DoubleDamagePowerUp, StrikePowerUp] # Ansonsten funnktioniert es nicht. (wenn nicht in dieser Datei)
 
 class Stone(Object2D):
     pos: tuple[number, number]
@@ -357,9 +478,14 @@ class Stone(Object2D):
         for g in self.game_state.current_objects:
             if not isinstance(g, Projectile):
                 continue
+            elif isinstance(g, PiercingProjectile) and g.has_hit_enemy(self):
+                pass
             elif self.collider.collides(g.collider):
-                self.game_state.remove_object(g)
-                self.lives -= consts.SPACESHIP_DAMAGE
+                if isinstance(g, PiercingProjectile):
+                    g.register_enemy(self)
+                else:
+                    self.game_state.remove_object(g)
+                self.lives -= consts.SPACESHIP_DAMAGE * self.game_state.player.damage_multiplier
                 self.health_bar.lives = self.lives
                 if self.lives > 0:
                     continue
@@ -368,7 +494,7 @@ class Stone(Object2D):
                 self.game_state.remove_object(self)
                 self.death_sound.play()
                 if g.owner != ProjectileOwner.ENEMY:
-                    self.game_state.score += 1
+                    self.game_state.score += consts.SCORE_STONE * self.game_state.player.point_multiplier
                 self.game_state.update_score()
 
 
@@ -452,11 +578,16 @@ class Enemy(Object2D):
                 continue
             if isinstance(g, Projectile) and g.owner != ProjectileOwner.PLAYER:
                 continue
+            if isinstance(g, PiercingProjectile) and g.has_hit_enemy(self):
+                continue
             if not self.collider.collides(g.collider):
                 continue
             
-            self.game_state.remove_object(g)
-            self.lives = self.lives - consts.SPACESHIP_DAMAGE
+            if isinstance(g, PiercingProjectile):
+                g.register_enemy(self)
+            else:
+                self.game_state.remove_object(g)
+            self.lives = self.lives - consts.SPACESHIP_DAMAGE * self.game_state.player.damage_multiplier
             if self.lives > 0:
                 self.health_bar.lives = self.lives
                 self.damage_sound.play()
@@ -464,7 +595,7 @@ class Enemy(Object2D):
 
             self.damage_sound.play()
             self.game_state.remove_object(self)
-            self.game_state.score += 2
+            self.game_state.score += consts.SCORE_ENEMY * self.game_state.player.point_multiplier
             self.game_state.update_score()
 
     def draw(self, canvas):
@@ -478,7 +609,7 @@ class Enemy(Object2D):
     def set_vel(self, new_vel):
         self.vel = new_vel
 
-class LiveDisplay(Object2D):
+class LifeDisplay(Object2D):
     image: Image
     pos: tuple[number, number]
     lives: int
