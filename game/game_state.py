@@ -57,7 +57,7 @@ class AndromedaClashGameState(GameStateType):
     lives_object: objects.LifeDisplay
     background_image: modules_images.Image
     active_powerups: data_structures.ObjectContainerBase["objects.PowerUp"]
-    
+    currently_game_over: bool
     
     @property
     def lives(self) -> int:
@@ -91,6 +91,7 @@ class AndromedaClashGameState(GameStateType):
         self.stone_spawn_probability = consts.START_STONE_SPAWNING_PROBABILITY
         self.powerup_spawn_probability = consts.START_POWERUP_SPAWNING_PROBABILITY
         self.enemy_spawn_probability = consts.START_ENEMY_SPAWNING_PROBABILITY
+        self.currently_game_over = False
         self.remove_all_objects()
         self.score = 0
         self.score_object = objects.Score(consts.POS_SCORE, "", consts.TEXT_SIZE_SCORE, consts.TEXT_COLOR_SCORE)
@@ -161,14 +162,18 @@ class AndromedaClashGameState(GameStateType):
                 object2d.draw(self.canvas)
             for object2d in top_layered:
                 object2d.draw(self.canvas)
+            index = 0
             for power_up in self.active_powerups:
                 if power_up.end_time <= time.time():
                     power_up.deactivate_power()
                     power_up.activated = False
                     self.active_powerups.remove_object(power_up)
                     continue
+                power_up.pos = (consts.SCREEN_WIDTH - (consts.POWERUP_HITBOX_RADIUS + 8) * (2 * index + 1), consts.SCREEN_HEIGHT - (consts.POWERUP_HITBOX_RADIUS + 8))
+                power_up.draw(self.canvas)
+                index += 1
                 power_up.update_activated()
-            if self.user_input.get_key_down_now(consts.key.r):
+            if self.user_input.get_key_down_now(consts.key.r) and self.currently_game_over:
                 self.start_game()
             pygame.display.update() # Änderungen werden umgesetzt.
             self.clock.tick(self.fps)
@@ -215,6 +220,7 @@ class AndromedaClashGameState(GameStateType):
         self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT), f"HIGHSCORE: {self.highscore}", 16, (255, 255, 255)))
         self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 2.5), "PRESS R TO RESTART", 16, (200, 200, 200)))
         self.score = 0
+        self.currently_game_over = True
     
     def update_score(self):
         self.score_object.set_text(f'SCORE {self.score}')
