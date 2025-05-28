@@ -3,12 +3,13 @@ from abc import ABC, abstractmethod
 from typing import Literal, Self
 import random
 import time
+import math
 from pathlib import Path
 from functools import lru_cache
 from enum import Enum
 from pygame import SurfaceType
 import pygame
-from . import game_state # Das "." sorgt für einen relativen Import also einen aus dem derzeitigen Modul.
+from . import game_state as module_game_state # Das "." sorgt für einen relativen Import also einen aus dem derzeitigen Modul.
 from . import sound as module_sound
 from . import collider as module_collider
 from . import consts
@@ -36,7 +37,7 @@ class Object2D(ABC):
     implementiert werden, damit man sie instanziieren kann. Abstrakte Klassen werden verwendet, um quasi
     grundlegende Bausteine zu definieren, ohne zu beschreiben, wie genau diese im Inneren funktionieren.
     """
-    game_state: game_state.GameStateType
+    game_state: module_game_state.GameStateType
     collider: module_collider.Collider
     
     @property
@@ -62,13 +63,17 @@ class SpaceShip(Object2D):
     shot_cooldown = consts.SPACESHIP_SHOT_COOLDOWN # Hiermit wird festgelegt, wie viel Zeit es zwischen Schüssen geben muss.#in consts übertragen
     shoot_sound: module_sound.Sound
     damage_sound: module_sound.Sound
-    game_state: game_state.AndromedaClashGameState
+    game_state: module_game_state.AndromedaClashGameState
     image: Image
     invincible: bool
     point_multiplier: int
     damage_multiplier: int
     piercing: bool
     multishot: bool
+    
+    @property
+    def attack_damage(self) -> number:
+        return consts.SPACESHIP_DAMAGE * self.damage_multiplier
 
     @property
     def lives(self) -> int:
@@ -165,9 +170,10 @@ class Projectile(Object2D):
     owner: ProjectileOwner
     pos: tuple[number, number]
     vel: tuple[number, number]
+    color: tuple[int, int, int] = (255, 0, 0)
     direction: number
     collider: module_collider.BoxCollider
-    game_state: game_state.AndromedaClashGameState
+    game_state: module_game_state.AndromedaClashGameState
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], direction: number, owner: ProjectileOwner):
         self.pos = pos
         self.vel = vel
@@ -178,7 +184,7 @@ class Projectile(Object2D):
     def draw(self, canvas):
         pygame.draw.line(
             canvas,
-            (255, 0, 0),
+            self.color,
             self.pos,
             (self.pos[0], self.pos[1] + consts.PROJECTILE_HEIGHT),
         consts.PROJECTILE_WIDTH)
@@ -194,6 +200,7 @@ class Projectile(Object2D):
 
 class PiercingProjectile(Projectile):
     _hit_enemies: data_structures.ObjectDict[float]
+    color = (0, 255, 255)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._hit_enemies = data_structures.ObjectDict()
@@ -222,7 +229,7 @@ class PowerUp(Object2D):
     color: tuple[int, int, int]
     end_time: float
     effect_time: float
-    game_state: game_state.AndromedaClashGameState
+    game_state: module_game_state.AndromedaClashGameState
     activated: bool = False
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number]):
@@ -285,7 +292,7 @@ class PowerUp(Object2D):
 class SprayPowerUp(PowerUp):
     strength: int
     effect_time = 10
-    color = (0, 0, 255)
+    color = (0, 255, 0)
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
         super().__init__(pos, vel)
@@ -317,7 +324,7 @@ class SprayPowerUp(PowerUp):
 class InvincibilityPowerUp(PowerUp):
     strength: int
     effect_time = 10
-    color = (0, 255, 0)
+    color = (0, 0, 255)
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
         super().__init__(pos, vel)
@@ -349,7 +356,7 @@ class InvincibilityPowerUp(PowerUp):
 class DoublePointsPowerUp(PowerUp):
     strength: int
     effect_time = 10
-    color = (255, 0, 0)
+    color = (200, 55, 100)
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
         super().__init__(pos, vel)
@@ -381,7 +388,7 @@ class DoublePointsPowerUp(PowerUp):
 class DoubleDamagePowerUp(PowerUp):
     strength: int
     effect_time = 10
-    color = (200, 55, 100)
+    color = (255, 0, 0)
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
         super().__init__(pos, vel)
@@ -453,6 +460,7 @@ class Stone(Object2D):
     death_sound: module_sound.Sound
     lives: int
     health_bar: HealthBar
+    game_state: module_game_state.AndromedaClashGameState
     
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], size: Literal[1, 2, 3, 4]):
         self.pos = pos
@@ -462,7 +470,7 @@ class Stone(Object2D):
         self.death_sound = module_sound.load_sound(consts.EXPLOSION_SOUND_PATH)
         self.lives = consts.STONE_LIVES
         self.color = consts.STONE_COLOR
-        self.health_bar = HealthBar(self.pos, self.lives, self.lives)
+        self.health_bar = HealthBar(self.pos, self.lives, self.lives, self)
 
     def update(self):
         if (self.pos[1] > consts.SCREEN_HEIGHT + self.size):
@@ -485,7 +493,7 @@ class Stone(Object2D):
                     g.register_enemy(self)
                 else:
                     self.game_state.remove_object(g)
-                self.lives -= consts.SPACESHIP_DAMAGE * self.game_state.player.damage_multiplier
+                self.lives -= self.game_state.player.attack_damage
                 self.health_bar.lives = self.lives
                 if self.lives > 0:
                     continue
@@ -536,6 +544,7 @@ class Enemy(Object2D):
     lives: int
     image: Image
     health_bar: HealthBar
+    game_state: module_game_state.AndromedaClashGameState
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], __type: int):
         self.pos = pos
@@ -554,7 +563,7 @@ class Enemy(Object2D):
             ),
             False, True
         )
-        self.health_bar = HealthBar(self.pos, self.lives, self.lives)
+        self.health_bar = HealthBar(self.pos, self.lives, self.lives, self)
 
     def update(self):
         self.shot_cooldown -= 1
@@ -587,7 +596,7 @@ class Enemy(Object2D):
                 g.register_enemy(self)
             else:
                 self.game_state.remove_object(g)
-            self.lives = self.lives - consts.SPACESHIP_DAMAGE * self.game_state.player.damage_multiplier
+            self.lives -= self.game_state.player.attack_damage
             if self.lives > 0:
                 self.health_bar.lives = self.lives
                 self.damage_sound.play()
@@ -690,11 +699,18 @@ class HealthBar(Object2D):
     pos: tuple[number, number]
     height: int
     width: int
+    parent: Object2D
     
-    def __init__(self, pos: tuple[number, number], lives: int, max_lives: int):
+    def __init__(self, pos: tuple[number, number], lives: int, max_lives: int, parent: Object2D):
         self.pos = pos
         self.lives = lives
         self.max_lives = max_lives
+        self.parent = parent
+
+    @property
+    def parent_game_state(self) -> module_game_state.AndromedaClashGameState:
+        assert isinstance(g_s := self.parent.game_state, module_game_state.AndromedaClashGameState)
+        return g_s
 
     def update(self):
         pass
@@ -704,4 +720,7 @@ class HealthBar(Object2D):
         pos_y = self.pos[1]
         pygame.draw.rect(canvas, consts.HEALTH_BAR_BACKGROUND_COLOR, (pos_x - consts.HEALTH_BAR_WIDTH / 2, pos_y, consts.HEALTH_BAR_WIDTH, consts.HEALTH_BAR_HEIGHT))
         pygame.draw.rect(canvas, consts.HEALTH_BAR_COLOR, (pos_x - consts.HEALTH_BAR_WIDTH / 2, pos_y, consts.HEALTH_BAR_WIDTH * (self.lives / self.max_lives), consts.HEALTH_BAR_HEIGHT))
-        
+        player_attack_damage = self.parent_game_state.player.attack_damage
+        for i in range(0, math.ceil(self.lives / player_attack_damage)):
+            health_step = self.lives - i * player_attack_damage
+            pygame.draw.rect(canvas, consts.HEALTH_BAR_SLICE_COLOR, (pos_x - consts.HEALTH_BAR_WIDTH / 2 - consts.HEALTH_BAR_SLICE_WIDTH / 2 + consts.HEALTH_BAR_WIDTH * (health_step / self.max_lives), pos_y, consts.HEALTH_BAR_SLICE_WIDTH, consts.HEALTH_BAR_HEIGHT))
