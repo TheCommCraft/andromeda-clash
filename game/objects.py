@@ -135,22 +135,22 @@ class SpaceShip(Object2D):
                     Projectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
                 self.game_state.add_object(projectile)
             else:
-                #Die Projektile müssen noch schrägfliegend gemacht werden.
+                # Die Projektile müssen noch schrägfliegend gemacht werden.
                 projectile_1 = \
-                    PiercingProjectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER) \
+                    PiercingProjectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (-math.sin(consts.PROJECILE_MUTISHOT_ANGLE) * consts.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MUTISHOT_ANGLE) * consts.PROJECTILE_SPEED), consts.PROJECILE_MUTISHOT_ANGLE, ProjectileOwner.PLAYER) \
                     if self.piercing else \
-                    Projectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
+                    Projectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (-math.sin(consts.PROJECILE_MUTISHOT_ANGLE) * consts.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MUTISHOT_ANGLE) * consts.PROJECTILE_SPEED), consts.PROJECILE_MUTISHOT_ANGLE, ProjectileOwner.PLAYER)
                 projectile_2 = \
-                    PiercingProjectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER) \
+                    PiercingProjectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (math.sin(consts.PROJECILE_MUTISHOT_ANGLE) * consts.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MUTISHOT_ANGLE) * consts.PROJECTILE_SPEED), consts.PROJECILE_MUTISHOT_ANGLE, ProjectileOwner.PLAYER) \
                     if self.piercing else \
-                    Projectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
+                    Projectile((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2), (math.sin(consts.PROJECILE_MUTISHOT_ANGLE) * consts.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MUTISHOT_ANGLE) * consts.PROJECTILE_SPEED), consts.PROJECILE_MUTISHOT_ANGLE, ProjectileOwner.PLAYER)
                 self.game_state.add_object(projectile_1)
                 self.game_state.add_object(projectile_2)
             self.shoot_sound.play()
         self.collider.position = self.pos
         if not self.invincible:
             for obj in self.game_state.current_objects:
-                if not isinstance(obj, Stone) and not isinstance(obj, Projectile) and not isinstance(obj, Enemy):
+                if not isinstance(obj, Stone) and not isinstance(obj, Projectile) and not isinstance(obj, CommonEnemy):
                     continue
                 if isinstance(obj, PiercingProjectile) and obj.has_hit_enemy(Object2D):
                     continue
@@ -165,6 +165,9 @@ class SpaceShip(Object2D):
                         self.game_state.remove_object(obj)
                     if self.lives <= 0:
                         self.game_state.game_over()
+    
+    def handle_shot(self):
+        pass
 
 class Projectile(Object2D):
     owner: ProjectileOwner
@@ -174,20 +177,28 @@ class Projectile(Object2D):
     direction: number
     collider: module_collider.BoxCollider
     game_state: module_game_state.AndromedaClashGameState
+    WIDTH = consts.PROJECTILE_WIDTH
+    HEIGHT = consts.PROJECTILE_HEIGHT
+    HITBOX_WIDTH = consts.PROJECTILE_HITBOX_WIDTH
+    HITBOX_HEIGHT = consts.PROJECTILE_HITBOX_HEIGHT
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], direction: number, owner: ProjectileOwner):
         self.pos = pos
         self.vel = vel
         self.direction = direction
-        self.collider = module_collider.BoxCollider(consts.PROJECTILE_HITBOX_WIDTH, consts.PROJECTILE_HITBOX_HEIGHT, pos)
+        self.collider = self.get_collider()
         self.owner = owner
     
+    def get_collider(self):
+        return module_collider.BoxCollider(self.HITBOX_WIDTH, self.HITBOX_HEIGHT, self.pos)
+    
     def draw(self, canvas):
+        data = (math.sin(consts.PROJECILE_MUTISHOT_ANGLE) * consts.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MUTISHOT_ANGLE) * consts.PROJECTILE_SPEED)
         pygame.draw.line(
             canvas,
             self.color,
-            self.pos,
-            (self.pos[0], self.pos[1] + consts.PROJECTILE_HEIGHT),
-        consts.PROJECTILE_WIDTH)
+            (self.pos[0] - self.vel[0] / 2, self.pos[1] - self.vel[1] / 2),
+            (self.pos[0] + self.vel[0] / 2, self.pos[1] + self.vel[1] / 2),
+        self.WIDTH)
     
     def update(self):
         if self.pos[1] < -50:
@@ -216,6 +227,13 @@ class PiercingProjectile(Projectile):
     def has_hit_enemy(self, enemy: Object2D):
         self._clean()
         return enemy in self._hit_enemies
+
+class FireProjectile(PiercingProjectile):
+    WIDTH = consts.FIRE_PROJECTILE_WIDTH
+    HEIGHT = consts.FIRE_PROJECTILE_HEIGHT
+    HITBOX_WIDTH = consts.FIRE_PROJECTILE_HITBOX_WIDTH
+    HITBOX_HEIGHT = consts.FIRE_PROJECTILE_HITBOX_HEIGHT
+    color = (255, 0, 0)
 
 class PowerUp(Object2D):
     '''
@@ -289,7 +307,7 @@ class PowerUp(Object2D):
         self.deactivate_power()
         self.activated = False
 
-class SprayPowerUp(PowerUp):
+class DoubleSpeedPowerUp(PowerUp):
     strength: int
     effect_time = 10
     color = (0, 255, 0)
@@ -312,12 +330,12 @@ class SprayPowerUp(PowerUp):
         pass
 
     def __eq__(self, value):
-        if not isinstance(value, SprayPowerUp):
+        if not isinstance(value, DoubleSpeedPowerUp):
             return False
         return self.strength == value.strength
     
     def __gt__(self, value):
-        if not isinstance(value, SprayPowerUp):
+        if not isinstance(value, DoubleSpeedPowerUp):
             return False
         return self.strength > value.strength
 
@@ -357,10 +375,12 @@ class DoublePointsPowerUp(PowerUp):
     strength: int
     effect_time = 10
     color = (200, 55, 100)
+    image: Image
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
         super().__init__(pos, vel)
         self.strength = strength
+        self.image = pygame.transform.scale(load_image(consts.POWERUP_DOUBLEPOINTS_IMAGE_PATH), (consts.POWERUP_HEIGHT, consts.POWERUP_WIDTH))
 
     def activate_power(self):
         self.game_state.player.point_multiplier += 1
@@ -385,14 +405,19 @@ class DoublePointsPowerUp(PowerUp):
             return False
         return self.strength > value.strength
     
+    def draw(self, canvas):
+        canvas.blit(self.image, self.pos)
+    
 class DoubleDamagePowerUp(PowerUp):
     strength: int
     effect_time = 10
     color = (255, 0, 0)
+    image: Image
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
         super().__init__(pos, vel)
         self.strength = strength
+        self.image = pygame.transform.scale(load_image(consts.POWERUP_DOUBLEDAMAGE_IMAGE_PATH),(consts.POWERUP_HEIGHT , consts.POWERUP_WIDTH))
 
     def activate_power(self):
         self.game_state.player.damage_multiplier += 1
@@ -416,6 +441,9 @@ class DoubleDamagePowerUp(PowerUp):
         if not isinstance(value, DoubleDamagePowerUp):
             return False
         return self.strength > value.strength
+    
+    def draw(self, canvas):
+        canvas.blit(self.image, self.pos) 
 
 class StrikePowerUp(PowerUp):
     strength: int
@@ -451,7 +479,41 @@ class StrikePowerUp(PowerUp):
             return False
         return self.strength > value.strength
 
-POWERUP_TYPES: list[type[PowerUp]] = [SprayPowerUp, InvincibilityPowerUp, DoublePointsPowerUp, DoubleDamagePowerUp, StrikePowerUp] # Ansonsten funnktioniert es nicht. (wenn nicht in dieser Datei)
+class MultishotPowerUp(PowerUp):
+    strength: int
+    effect_time = 10
+    color = (255, 0, 255)
+
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
+        super().__init__(pos, vel)
+        self.strength = strength
+
+    def activate_power(self):
+        if type(self.game_state.player) == SpaceShip:
+            self.game_state.player.multishot = True
+
+    def deactivate_power(self):
+        if type(self.game_state.player) == SpaceShip:
+            self.game_state.player.multishot = False
+
+    @classmethod
+    def make_one(cls, pos, vel):
+        return cls(pos, vel)
+    
+    def update_activated(self):
+        pass
+
+    def __eq__(self, value):
+        if not isinstance(value, MultishotPowerUp):
+            return False
+        return self.strength == value.strength
+    
+    def __gt__(self, value):
+        if not isinstance(value, MultishotPowerUp):
+            return False
+        return self.strength > value.strength
+    
+POWERUP_TYPES: list[type[PowerUp]] = [DoubleSpeedPowerUp, InvincibilityPowerUp, DoublePointsPowerUp, DoubleDamagePowerUp, StrikePowerUp, MultishotPowerUp] # Ansonsten funnktioniert es nicht. (wenn nicht in dieser Datei)
 
 class Stone(Object2D):
     pos: tuple[number, number]
@@ -511,7 +573,7 @@ class Stone(Object2D):
         Wird ein Stein getroffen, teilt er sich in 2 kleinere auf. Beide fliegen gleich schnell nach unten und zur Seite. Jedoch einer nach rechts und einer nach links.        
         '''
         
-        #Magic Numbers vermeiden, und Kommentare zu den Operationen
+        # Magic Numbers vermeiden, und Kommentare zu den Operationen
         weight_a = random.random() * 0.25 + 0.375
         vel_x = self.vel[0] * 2.5
         vel_y = self.vel[1] * 2.2
@@ -534,39 +596,41 @@ class Stone(Object2D):
     def set_vel(self, new_vel):
         self.vel = new_vel
 
-
-class Enemy(Object2D):
+class CommonEnemy(Object2D):
     pos: tuple[number, number]
     vel: tuple[number, number]
     collider: module_collider.BoxCollider
-    shot_cooldown: int
+    shot_cooldown_timer: int
     shot_sound: module_sound.Sound
     lives: int
     image: Image
     health_bar: HealthBar
     game_state: module_game_state.AndromedaClashGameState
+    SHOT_COOLDOWN = consts.ENEMY_SHOT_COOLDOWN
+    PROJECTILE_SPEED = consts.PROJECTILE_SPEED
 
-    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], __type: int):
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number]):
         self.pos = pos
         self.vel = vel
-        self.type = __type
         self.size = [consts.ENEMY_HITBOX_WIDTH, consts.ENEMY_HITBOX_HEIGHT]
         self.collider = module_collider.BoxCollider(consts.ENEMY_HITBOX_WIDTH, consts.ENEMY_HITBOX_HEIGHT, pos)
         self.color = consts.ENEMY_COLOR[0]
-        self.shot_cooldown = consts.ENEMY_SHOT_COOLDOWN
+        self.shot_cooldown_timer = self.SHOT_COOLDOWN
         self.shot_sound = module_sound.load_sound(consts.SHOOT_SOUND_PATH)
         self.damage_sound = module_sound.load_sound(consts.HIT_SOUND_PATH)
         self.lives = consts.ENEMY_LIVES
-        self.image = pygame.transform.flip(
+        self.image = self.get_image()
+        self.health_bar = HealthBar(self.pos, self.lives, self.lives, self)
+    
+    def get_image(self) -> Image:
+        return pygame.transform.flip(
             pygame.transform.scale(
                 load_image(consts.ENEMY_IMAGE_PATH), (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT)
             ),
             False, True
         )
-        self.health_bar = HealthBar(self.pos, self.lives, self.lives, self)
 
     def update(self):
-        self.shot_cooldown -= 1
         if (self.pos[1] > consts.SCREEN_HEIGHT + self.size[1]):
             self.game_state.remove_object(self)
         self.pos = (
@@ -575,11 +639,18 @@ class Enemy(Object2D):
         )
         self.collider.position = self.pos
         self.collision()
-        if self.shot_cooldown <= 0:
-            projectile = Projectile(self.pos, (0, consts.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
-            self.game_state.add_object(projectile)
-            self.shot_cooldown = consts.ENEMY_SHOT_COOLDOWN
-            self.shot_sound.play()
+        self.handle_shooting()
+    
+    def handle_shooting(self):
+        self.shot_cooldown_timer -= 1
+        if self.shot_cooldown_timer <= 0:
+            self.handle_shot()
+            self.shot_cooldown_timer = self.SHOT_COOLDOWN
+    
+    def handle_shot(self):
+        projectile = Projectile(self.pos, (0, self.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
+        self.game_state.add_object(projectile)
+        self.shot_sound.play()
 
     def collision(self):
         for g in self.game_state.current_objects:
@@ -617,6 +688,38 @@ class Enemy(Object2D):
     
     def set_vel(self, new_vel):
         self.vel = new_vel
+
+class PiercingProjectileEnemy(CommonEnemy):
+    def handle_shot(self):
+        projectile = PiercingProjectile(self.pos, (0, self.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
+        self.game_state.add_object(projectile)
+        self.shot_sound.play()
+    
+    def get_image(self) -> Image:
+        return pygame.transform.flip(
+            pygame.transform.scale(
+                load_image(consts.PIERCING_ENEMY_IMAGE_PATH), (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT)
+            ),
+            False, True
+        )
+
+class FireEnemy(CommonEnemy):
+    SHOT_COOLDOWN = consts.FIRE_ENEMY_SHOT_COOLDOWN
+    PROJECTILE_SPEED = consts.FIRE_PROJECTILE_SPEED
+    def handle_shot(self):
+        projectile = FireProjectile(self.pos, (0, self.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
+        self.game_state.add_object(projectile)
+        self.shot_sound.play()
+    
+    def get_image(self) -> Image:
+        return pygame.transform.flip(
+            pygame.transform.scale(
+                load_image(consts.FIRE_ENEMY_IMAGE_PATH), (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT)
+            ),
+            False, True
+        )
+
+ENEMY_TYPES: list[type[CommonEnemy]] = [CommonEnemy, PiercingProjectileEnemy, FireEnemy]
 
 class LifeDisplay(Object2D):
     image: Image
@@ -724,3 +827,4 @@ class HealthBar(Object2D):
         for i in range(0, math.ceil(self.lives / player_attack_damage)):
             health_step = self.lives - i * player_attack_damage
             pygame.draw.rect(canvas, consts.HEALTH_BAR_SLICE_COLOR, (pos_x - consts.HEALTH_BAR_WIDTH / 2 - consts.HEALTH_BAR_SLICE_WIDTH / 2 + consts.HEALTH_BAR_WIDTH * (health_step / self.max_lives), pos_y, consts.HEALTH_BAR_SLICE_WIDTH, consts.HEALTH_BAR_HEIGHT))
+            

@@ -51,20 +51,20 @@ class ObjectDictBase(Generic[O, V]):
     objects: dict[ReferenceToObject[O], V]
     def __init__(self, start_value: Iterable[tuple[O, V]] | None = None):
         self.objects = {ReferenceToObject(obj): val for obj, val in start_value} if start_value else {}
-    
+
     def __getitem__(self, obj: O) -> V:
         return self.objects[ReferenceToObject(obj)]
-    
+
     def __setitem__(self, obj: O, value: V) -> None:
         self.objects[ReferenceToObject(obj)] = value
 
     def pop(self, obj: O) -> V:
         return self.objects.pop(ReferenceToObject(obj))
-    
+
     def popitem(self) -> tuple[O, V]:
         obj, value = self.objects.popitem()
         return (obj.obj, value)
-    
+
     def clear(self) -> None:
         self.objects.clear()
     

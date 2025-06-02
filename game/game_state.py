@@ -205,9 +205,9 @@ class AndromedaClashGameState(GameStateType):
             vel_y = self.enemy_min_y_vel + random.random() * (self.enemy_max_vel - self.enemy_min_y_vel)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
             vel_x = math.sqrt(self.enemy_max_vel - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
             vel = (vel_x, vel_y)
-            enemy_type = random.choice(consts.ENEMY_TYPES)
+            enemy_type = random.choice(objects.ENEMY_TYPES)
             pos = (random.random()*GAME_SIZE[0], -consts.ENEMY_HEIGHT)
-            self.add_object(objects.Enemy(pos, vel, enemy_type))
+            self.add_object(enemy_type(pos, vel))
         self.enemy_spawn_probability += consts.ENEMY_SPAWNING_PROPABILITY_INCREASE / (1 + self.enemy_spawn_probability * consts.ENEMY_SPAWNING_PROPABILITY_INCREASE_DECREASE)
     
 
