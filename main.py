@@ -8,4 +8,6 @@ canvas = pygame.display.set_mode(GAME_SIZE) # Bildschirmgröße festlegen und da
 user_input = UserInput()
 
 state = AndromedaClashGameState(canvas, user_input)
-state.loop()
+
+if __name__ == "__main__":
+    state.loop()

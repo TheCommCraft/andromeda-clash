@@ -134,6 +134,7 @@ class AndromedaClashGameState(GameStateType):
         power_up.activate_power()
         power_up.end_time = time.time() + power_up.effect_time
         power_up.activated = True
+        power_up.arc_cooldown = objects.ArcCooldown(power_up.pos, power_up.end_time, power_up.effect_time, power_up)
         self.active_powerups.add_object(power_up)
         
     def loop(self) -> None:
@@ -171,6 +172,8 @@ class AndromedaClashGameState(GameStateType):
                     continue
                 power_up.pos = (consts.SCREEN_WIDTH - (consts.POWERUP_HITBOX_RADIUS + 8) * (2 * index + 1), consts.SCREEN_HEIGHT - (consts.POWERUP_HITBOX_RADIUS + 8))
                 power_up.draw(self.canvas)
+                power_up.arc_cooldown.pos = power_up.pos
+                power_up.arc_cooldown.draw(self.canvas)
                 index += 1
                 power_up.update_activated()
             if self.user_input.get_key_down_now(consts.key.r) and self.currently_game_over:
@@ -184,7 +187,10 @@ class AndromedaClashGameState(GameStateType):
             size = random.choice(consts.STONE_SIZES)
             upwards = random.random() < 0.5
             on_the_left = random.random() < 0.5
-            pos = (-size * consts.STONE_BASE_RADIUS if on_the_left else consts.SCREEN_WIDTH + size * consts.STONE_BASE_RADIUS, consts.SCREEN_HEIGHT / 2)
+            pos_y = self.player.pos[1] - consts.SPACESHIP_HITBOX_HEIGHT * 3
+            if self.player.pos[1] < consts.SCREEN_HEIGHT / 2:
+                pos_y = consts.SCREEN_HEIGHT / 2 + consts.SPACESHIP_HITBOX_HEIGHT
+            pos = (-size * consts.STONE_BASE_RADIUS if on_the_left else consts.SCREEN_WIDTH + size * consts.STONE_BASE_RADIUS, pos_y)
             vel_y = (-1 if upwards else 1) * (self.stone_min_y_vel + random.random() * (self.stone_max_vel - self.stone_min_y_vel))   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
             vel_x = (1 if on_the_left else -1) * math.sqrt(self.stone_max_vel - vel_y**2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
             vel = (vel_x, vel_y)
@@ -205,7 +211,7 @@ class AndromedaClashGameState(GameStateType):
             vel_y = self.enemy_min_y_vel + random.random() * (self.enemy_max_vel - self.enemy_min_y_vel)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
             vel_x = math.sqrt(self.enemy_max_vel - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
             vel = (vel_x, vel_y)
-            enemy_type = random.choice(objects.ENEMY_TYPES)
+            enemy_type = random.choices(objects.ENEMY_TYPES, objects.ENEMY_WEIGHTS)[0]
             pos = (random.random()*GAME_SIZE[0], -consts.ENEMY_HEIGHT)
             self.add_object(enemy_type(pos, vel))
         self.enemy_spawn_probability += consts.ENEMY_SPAWNING_PROPABILITY_INCREASE / (1 + self.enemy_spawn_probability * consts.ENEMY_SPAWNING_PROPABILITY_INCREASE_DECREASE)
@@ -221,6 +227,8 @@ class AndromedaClashGameState(GameStateType):
         self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 2.5), "PRESS R TO RESTART", 16, (200, 200, 200)))
         self.score = 0
         self.currently_game_over = True
+        for powerup in self.active_powerups:
+            powerup.end_time = -1
     
     def update_score(self):
         self.score_object.set_text(f'SCORE {self.score}')
