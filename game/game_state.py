@@ -52,7 +52,6 @@ class AndromedaClashGameState(GameStateType):
     stone_spawn_probability: float
     enemy_min_y_vel: float
     enemy_max_vel: float
-    enemy_spawn_probability: float
     powerup_spawn_probability: float
     score: int
     highscore: int
@@ -64,6 +63,7 @@ class AndromedaClashGameState(GameStateType):
     current_wave: list[objects.CommonEnemy]
     current_wave_cooldown: int
     current_wave_idx: int
+    credits: int
     
     @property
     def lives(self) -> int:
@@ -82,6 +82,7 @@ class AndromedaClashGameState(GameStateType):
         self.background_image = pygame.transform.scale(modules_images.load_image(consts.BACKGROUND_IMAGE_PATH), GAME_SIZE)
         
         self.highscore = 0
+        self.credits = 0
         
         self.start_game()
     
@@ -96,7 +97,6 @@ class AndromedaClashGameState(GameStateType):
         self.enemy_max_vel = consts.ENEMY_STANDARD_MAX_VEL
         self.stone_spawn_probability = consts.START_STONE_SPAWNING_PROBABILITY
         self.powerup_spawn_probability = consts.START_POWERUP_SPAWNING_PROBABILITY
-        self.enemy_spawn_probability = consts.START_ENEMY_SPAWNING_PROBABILITY
         self.currently_game_over = False
         self.remove_all_objects()
         self.score = 0
@@ -128,6 +128,14 @@ class AndromedaClashGameState(GameStateType):
         self.current_objects.remove_all()
     
     def activate_powerup(self, power_up: objects.PowerUp):
+        '''
+        Wird ein PowerUp eingesammelt, passieren mehrere Dinge:
+            1.1 Falls der Spieler dieses PowerUp bereits ein PowerUp dieser Art hat, wird das PowerUp ersetzt, wodurch die wirkdauer verlängert wird.
+            1.2 Falls der Spieler bereits ein PowerUp dieser Art hat, welches schwächer ist, wird dieses durch das Stärkere ersetzt.
+            1.3 Falls er bereits ein PowerUp dieser Art hat, welches stärker ist, hat das Einsammeln keinen Effekt.
+            2. Falls das powerUp neu ist, wird dessen Fähigkeit aktiviert.
+            3. Es wird ein Timer erstellt, nach dessen Ablauf der Effekt des PowerUps beendet wird.
+        '''
         self.remove_object(power_up)
         for other_power_up in self.active_powerups:
             if power_up == other_power_up:
@@ -220,29 +228,34 @@ class AndromedaClashGameState(GameStateType):
         vel_y = self.enemy_min_y_vel + random.random() * (self.enemy_max_vel - self.enemy_min_y_vel)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
         vel_x = math.sqrt(self.enemy_max_vel - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
         vel = (vel_x, vel_y)
-        pos = (random.random()*GAME_SIZE[0], -consts.ENEMY_HEIGHT)
-        return enemy_type(pos, vel)
+        pos = (random.random() * GAME_SIZE[0], -consts.ENEMY_HEIGHT)
+        target_height = consts.ENEMY_TARGET_HEIGHT_RANGE.start + consts.ENEMY_TARGET_HEIGHT_RANGE.stop - consts.ENEMY_TARGET_HEIGHT_RANGE.start * random.random()
+        return enemy_type(pos, vel, target_height)
 
     def create_wave(self):
-        self.current_wave_cooldown = 30
+        self.current_wave_cooldown = 90
         self.current_wave_idx += 1
         self.current_wave = []
         wave_score = 2 + self.current_wave_idx * 2
         last_wave_score = 2 + (self.current_wave_idx - 1) * 2
+        previous_type: type[objects.CommonEnemy] = objects.CommonEnemy
         for obj_type, score in objects.ENEMY_COSTS.items():
             if score > wave_score:
-                strongest_type = obj_type
+                strongest_type = previous_type
                 break
+            previous_type = obj_type
         else:
             strongest_type = obj_type
         if objects.ENEMY_COSTS[strongest_type] > last_wave_score:
             wave_score -= objects.ENEMY_COSTS[strongest_type]
             self.current_wave.append(self.create_enemy(strongest_type))
         while wave_score > 0:
+            previous_type = objects.CommonEnemy
             for obj_type, score in objects.ENEMY_THRESHOLDS.items():
                 if score > wave_score:
-                    strongest_type = obj_type
+                    strongest_type = previous_type
                     break
+                previous_type = obj_type
             else:
                 strongest_type = obj_type
             wave_score -= objects.ENEMY_COSTS[strongest_type]
@@ -260,17 +273,7 @@ class AndromedaClashGameState(GameStateType):
         self.current_wave_cooldown -= 1
         if self.current_wave_cooldown <= 0 and self.current_wave:
             self.add_object(self.current_wave.pop(0))
-            self.current_wave_cooldown = 15
-        
-        # if random.random() < self.enemy_spawn_probability: # Wahrscheinlichkeit. dass ein Stein entsteht
-        #     vel_y = self.enemy_min_y_vel + random.random() * (self.enemy_max_vel - self.enemy_min_y_vel)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
-        #     vel_x = math.sqrt(self.enemy_max_vel - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
-        #     vel = (vel_x, vel_y)
-        #     enemy_type = random.choices(objects.ENEMY_TYPES, objects.ENEMY_WEIGHTS)[0]
-        #     pos = (random.random()*GAME_SIZE[0], -consts.ENEMY_HEIGHT)
-        #     self.add_object(enemy_type(pos, vel))
-        # self.enemy_spawn_probability += consts.ENEMY_SPAWNING_PROPABILITY_INCREASE / (1 + self.enemy_spawn_probability * consts.ENEMY_SPAWNING_PROPABILITY_INCREASE_DECREASE)
-    
+            self.current_wave_cooldown = consts.ENEMY_SPAWN_COOLDOWN
 
     def game_over(self):
         self.remove_all_objects()
@@ -280,6 +283,7 @@ class AndromedaClashGameState(GameStateType):
         self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), f"SCORE: {self.score}", 16, (255, 255, 255)))
         self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT), f"HIGHSCORE: {self.highscore}", 16, (255, 255, 255)))
         self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 2.5), "PRESS R TO RESTART", 16, (200, 200, 200)))
+        self.credits += (self.score//100)
         self.score = 0
         self.currently_game_over = True
         for powerup in self.active_powerups:

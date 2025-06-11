@@ -310,6 +310,9 @@ class PowerUp(Object2D):
         self.activated = False
 
 class DoubleSpeedPowerUp(PowerUp):
+    '''
+    Diese PowerUp verursacht, dass die Schussrate temporär verdoppelt wird.
+    '''
     strength: int
     effect_time = 20
     color = (0, 255, 0)
@@ -342,6 +345,9 @@ class DoubleSpeedPowerUp(PowerUp):
         return self.strength > value.strength
 
 class InvincibilityPowerUp(PowerUp):
+    '''
+    Dieses PowerUp verursacht, dass der Spieler zeitweise nicht getroffen werden kann oder anderweitig Schaden erleidet.
+    '''
     strength: int
     effect_time = 20
     color = (0, 0, 255)
@@ -374,6 +380,9 @@ class InvincibilityPowerUp(PowerUp):
         return self.strength > value.strength
 
 class DoublePointsPowerUp(PowerUp):
+    '''
+    Dieses PowerUp verursacht, dass der Spieler zeitweise die Doppelte Anzahl an Punkten pro Kill für den Score erhält.
+    '''
     strength: int
     effect_time = 20
     color = (200, 55, 100)
@@ -411,6 +420,9 @@ class DoublePointsPowerUp(PowerUp):
         canvas.blit(self.image, (self.pos[0] - consts.POWERUP_WIDTH / 2, self.pos[1] - consts.POWERUP_HEIGHT / 2))
     
 class DoubleDamagePowerUp(PowerUp):
+    '''
+    Dieses PowerUp verursacht, dass der Spieler zeitweise Gegnern und Steinen doppelten Schaden zufügt.
+    '''
     strength: int
     effect_time = 20
     color = (255, 0, 0)
@@ -448,6 +460,10 @@ class DoubleDamagePowerUp(PowerUp):
         canvas.blit(self.image, (self.pos[0] - consts.POWERUP_WIDTH / 2, self.pos[1] - consts.POWERUP_HEIGHT / 2)) 
 
 class StrikePowerUp(PowerUp):
+    '''
+    Dieses PowerUp verursacht, dass der Spieler, mit Durchschussprojektilen schießt, wodurch er mit einem Schuss mehrere Gegner / Steine, aber keinen Stein / Gegner mehrfach, treffen kann.
+    
+    '''
     strength: int
     effect_time = 20
     color = (0, 255, 255)
@@ -482,6 +498,9 @@ class StrikePowerUp(PowerUp):
         return self.strength > value.strength
 
 class MultishotPowerUp(PowerUp):
+    '''
+    Dieses PowerUp verursacht, dass der Spieler zeitweise mit mehreren Projektilen in verschiedene Richtungen schießt.
+    '''
     strength: int
     effect_time = 20
     color = (255, 0, 255)
@@ -525,6 +544,7 @@ class Stone(Object2D):
     lives: int
     health_bar: HealthBar
     game_state: module_game_state.AndromedaClashGameState
+    image: Image
     
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], size: Literal[1, 2, 3, 4]):
         self.pos = pos
@@ -535,6 +555,7 @@ class Stone(Object2D):
         self.lives = consts.STONE_LIVES
         self.color = consts.STONE_COLOR
         self.health_bar = HealthBar(self.pos, self.lives, self.lives, self)
+        self.image = pygame.transform.scale(load_image(consts.STONE_IMAGE_PATH), (self.size * 2, self.size * 2))
 
     def update(self):
         if (self.pos[1] > consts.SCREEN_HEIGHT + self.size):
@@ -590,7 +611,7 @@ class Stone(Object2D):
         if self.health_bar.lives < self.health_bar.max_lives:
             self.health_bar.pos = (self.pos[0], self.pos[1] - self.size - consts.HEALTH_BAR_HEIGHT - 2)
             self.health_bar.draw(canvas)
-        pygame.draw.circle(canvas, self.color, self.pos, self.size, 4)
+        canvas.blit(self.image, (self.pos[0] - self.size, self.pos[1] - self.size))
 
     def set_pos(self, new_pos):
         self.pos = new_pos
@@ -609,10 +630,11 @@ class CommonEnemy(Object2D):
     image: Image
     health_bar: HealthBar
     game_state: module_game_state.AndromedaClashGameState
+    target_height: float
     SHOT_COOLDOWN = consts.ENEMY_SHOT_COOLDOWN
     PROJECTILE_SPEED = consts.PROJECTILE_SPEED
 
-    def __init__(self, pos: tuple[number, number], vel: tuple[number, number]):
+    def __init__(self, pos: tuple[number, number], vel: tuple[number, number], target_height: float):
         self.pos = pos
         self.vel = vel
         self.size = (consts.ENEMY_HITBOX_WIDTH, consts.ENEMY_HITBOX_HEIGHT)
@@ -624,6 +646,7 @@ class CommonEnemy(Object2D):
         self.lives = consts.ENEMY_LIVES
         self.image = self.get_image()
         self.health_bar = HealthBar(self.pos, self.lives, self.lives, self)
+        self.target_height = target_height
     
     def get_image(self) -> Image:
         return pygame.transform.flip(
@@ -639,6 +662,10 @@ class CommonEnemy(Object2D):
         self.pos = (
             (self.pos[0] + self.vel[0] + self.size[0]) % (consts.SCREEN_WIDTH + self.size[0] * 2) - self.size[0],
             self.pos[1] + self.vel[1]
+        )
+        self.vel = (
+            self.vel[0],
+            (self.target_height - self.pos[1]) * 0.01
         )
         self.collider.position = self.pos
         self.collision()
@@ -723,8 +750,8 @@ class FireEnemy(CommonEnemy):
         )
 
 ENEMY_TYPES: list[type[CommonEnemy]] = [CommonEnemy, PiercingProjectileEnemy, FireEnemy]
-ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 2, FireEnemy: 5}
-ENEMY_THRESHOLDS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 5, FireEnemy: 20}
+ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 3, FireEnemy: 8}
+ENEMY_THRESHOLDS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 8, FireEnemy: 20}
 ENEMY_WEIGHTS: list[int] = [5, 4, 2]
 
 class LifeDisplay(Object2D):
