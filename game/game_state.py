@@ -136,6 +136,7 @@ class AndromedaClashGameState(GameStateType):
             2. Falls das powerUp neu ist, wird dessen Fähigkeit aktiviert.
             3. Es wird ein Timer erstellt, nach dessen Ablauf der Effekt des PowerUps beendet wird.
         '''
+        module_sound.load_sound(consts.POWERUP_SOUND_PATH).play()
         self.remove_object(power_up)
         for other_power_up in self.active_powerups:
             if power_up == other_power_up:
@@ -205,7 +206,7 @@ class AndromedaClashGameState(GameStateType):
             size = random.choice(consts.STONE_SIZES)
             upwards = random.random() < 0.5
             on_the_left = random.random() < 0.5
-            pos_y = self.player.pos[1] - consts.SPACESHIP_HITBOX_HEIGHT * 3
+            pos_y = self.player.pos[1] - consts.SPACESHIP_HITBOX_HEIGHT * 6
             if self.player.pos[1] < consts.SCREEN_HEIGHT / 2:
                 pos_y = consts.SCREEN_HEIGHT / 2 + consts.SPACESHIP_HITBOX_HEIGHT
             pos = (-size * consts.STONE_BASE_RADIUS if on_the_left else consts.SCREEN_WIDTH + size * consts.STONE_BASE_RADIUS, pos_y)
@@ -247,6 +248,8 @@ class AndromedaClashGameState(GameStateType):
         else:
             strongest_type = obj_type
         if objects.ENEMY_COSTS[strongest_type] > last_wave_score:
+            # Erste Welle, bei der die Kosten eines Gegnertypen erreicht sind, enthält einen Gegner dieser Art.
+            # Danach wird der ENEMY_THRESHHOLD benötigt, um einen derartigen Gegner zu spawnen.
             wave_score -= objects.ENEMY_COSTS[strongest_type]
             self.current_wave.append(self.create_enemy(strongest_type))
         while wave_score > 0:
