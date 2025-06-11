@@ -316,10 +316,12 @@ class DoubleSpeedPowerUp(PowerUp):
     strength: int
     effect_time = 20
     color = (0, 255, 0)
+    image: Image
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
         super().__init__(pos, vel)
         self.strength = strength
+        self.image = pygame.transform.scale(load_image(consts.POWERUP_DOUBLEPOINTS_IMAGE_PATH), (consts.POWERUP_HEIGHT, consts.POWERUP_WIDTH))
 
     @classmethod
     def make_one(cls, pos, vel):
@@ -343,6 +345,9 @@ class DoubleSpeedPowerUp(PowerUp):
         if not isinstance(value, DoubleSpeedPowerUp):
             return False
         return self.strength > value.strength
+    
+    def draw(self, canvas):
+        canvas.blit(self.image, (self.pos[0] - consts.POWERUP_WIDTH / 2, self.pos[1] - consts.POWERUP_HEIGHT / 2))
 
 class InvincibilityPowerUp(PowerUp):
     '''
