@@ -24,7 +24,7 @@ class ProjectileOwner(Enum):
 
 Canvas = SurfaceType
 
-number = float | int
+number = float | int #Wenn der Typ sowohl float, als auch int sein kann, wird number angegeben.
 
 class Object2D(ABC):
     """
@@ -56,6 +56,10 @@ class Object2D(ABC):
         pass
 
 class SpaceShip(Object2D):
+    '''
+    Die Klasse SpaceShip definiert das Raumschiff, welches der Spieler steuert.
+    Er kann es bewegen und schießen lassen.
+    '''
     pos: tuple[number, number]
     vel: tuple[number, number]
     collider: module_collider.BoxCollider
@@ -719,6 +723,8 @@ class FireEnemy(CommonEnemy):
         )
 
 ENEMY_TYPES: list[type[CommonEnemy]] = [CommonEnemy, PiercingProjectileEnemy, FireEnemy]
+ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 2, FireEnemy: 5}
+ENEMY_THRESHOLDS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 5, FireEnemy: 20}
 ENEMY_WEIGHTS: list[int] = [5, 4, 2]
 
 class LifeDisplay(Object2D):

@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Collection
 from pathlib import Path
+from typing import TypeVar
 import random
 import time
 import math
@@ -33,6 +34,8 @@ class GameStateType(ABC):
     def remove_object(self, obj: objects.Object2D):
         pass
 
+E = TypeVar("E", bound=objects.CommonEnemy)
+
 class AndromedaClashGameState(GameStateType):
     """
     Der Spielzustand. 
@@ -58,6 +61,9 @@ class AndromedaClashGameState(GameStateType):
     background_image: modules_images.Image
     active_powerups: data_structures.ObjectContainerBase["objects.PowerUp"]
     currently_game_over: bool
+    current_wave: list[objects.CommonEnemy]
+    current_wave_cooldown: int
+    current_wave_idx: int
     
     @property
     def lives(self) -> int:
@@ -98,6 +104,10 @@ class AndromedaClashGameState(GameStateType):
         self.update_score()
         self.add_object(self.score_object)
         self.active_powerups = data_structures.ObjectContainer()
+        
+        self.current_wave = []
+        self.current_wave_cooldown = 0
+        self.current_wave_idx = -1
         
         self.lives_object = objects.LifeDisplay()
         self.add_object(self.lives_object)
@@ -206,15 +216,60 @@ class AndromedaClashGameState(GameStateType):
             self.add_object(powerup_type(pos, vel))
         self.powerup_spawn_probability += consts.POWERUP_SPAWNING_PROPABILITY_INCREASE / (1 + self.powerup_spawn_probability * consts.POWERUP_SPAWNING_PROPABILITY_INCREASE_DECREASE)
 
+    def create_enemy(self, enemy_type: type[E]) -> E:
+        vel_y = self.enemy_min_y_vel + random.random() * (self.enemy_max_vel - self.enemy_min_y_vel)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
+        vel_x = math.sqrt(self.enemy_max_vel - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
+        vel = (vel_x, vel_y)
+        pos = (random.random()*GAME_SIZE[0], -consts.ENEMY_HEIGHT)
+        return enemy_type(pos, vel)
+
+    def create_wave(self):
+        self.current_wave_cooldown = 30
+        self.current_wave_idx += 1
+        self.current_wave = []
+        wave_score = 2 + self.current_wave_idx * 2
+        last_wave_score = 2 + (self.current_wave_idx - 1) * 2
+        for obj_type, score in objects.ENEMY_COSTS.items():
+            if score > wave_score:
+                strongest_type = obj_type
+                break
+        else:
+            strongest_type = obj_type
+        if objects.ENEMY_COSTS[strongest_type] > last_wave_score:
+            wave_score -= objects.ENEMY_COSTS[strongest_type]
+            self.current_wave.append(self.create_enemy(strongest_type))
+        while wave_score > 0:
+            for obj_type, score in objects.ENEMY_THRESHOLDS.items():
+                if score > wave_score:
+                    strongest_type = obj_type
+                    break
+            else:
+                strongest_type = obj_type
+            wave_score -= objects.ENEMY_COSTS[strongest_type]
+            self.current_wave.append(self.create_enemy(strongest_type))
+    
+    def has_enemies(self) -> bool:
+        for i in self.current_objects:
+            if isinstance(i, objects.CommonEnemy):
+                return True
+        return False
+
     def spawn_enemy(self):
-        if random.random() < self.enemy_spawn_probability: # Wahrscheinlichkeit. dass ein Stein entsteht
-            vel_y = self.enemy_min_y_vel + random.random() * (self.enemy_max_vel - self.enemy_min_y_vel)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
-            vel_x = math.sqrt(self.enemy_max_vel - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
-            vel = (vel_x, vel_y)
-            enemy_type = random.choices(objects.ENEMY_TYPES, objects.ENEMY_WEIGHTS)[0]
-            pos = (random.random()*GAME_SIZE[0], -consts.ENEMY_HEIGHT)
-            self.add_object(enemy_type(pos, vel))
-        self.enemy_spawn_probability += consts.ENEMY_SPAWNING_PROPABILITY_INCREASE / (1 + self.enemy_spawn_probability * consts.ENEMY_SPAWNING_PROPABILITY_INCREASE_DECREASE)
+        if not self.current_wave and not self.has_enemies():
+            self.create_wave()
+        self.current_wave_cooldown -= 1
+        if self.current_wave_cooldown <= 0 and self.current_wave:
+            self.add_object(self.current_wave.pop(0))
+            self.current_wave_cooldown = 15
+        
+        # if random.random() < self.enemy_spawn_probability: # Wahrscheinlichkeit. dass ein Stein entsteht
+        #     vel_y = self.enemy_min_y_vel + random.random() * (self.enemy_max_vel - self.enemy_min_y_vel)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
+        #     vel_x = math.sqrt(self.enemy_max_vel - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
+        #     vel = (vel_x, vel_y)
+        #     enemy_type = random.choices(objects.ENEMY_TYPES, objects.ENEMY_WEIGHTS)[0]
+        #     pos = (random.random()*GAME_SIZE[0], -consts.ENEMY_HEIGHT)
+        #     self.add_object(enemy_type(pos, vel))
+        # self.enemy_spawn_probability += consts.ENEMY_SPAWNING_PROPABILITY_INCREASE / (1 + self.enemy_spawn_probability * consts.ENEMY_SPAWNING_PROPABILITY_INCREASE_DECREASE)
     
 
     def game_over(self):
