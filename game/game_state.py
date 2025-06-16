@@ -113,7 +113,9 @@ class AndromedaClashGameState(GameStateType):
         self.add_object(self.lives_object)
         
         self.add_player()
-    
+
+        self.credits_object = objects.Credits(consts.POS_CREDITS, "", consts.TEXT_SIZE_CREDITS, consts.TEXT_COLOR_CREDITS)
+        self.add_object(self.credits_o
     def add_object(self, obj: objects.Object2D):
         self.current_objects.add_object(obj)
     
@@ -213,8 +215,9 @@ class AndromedaClashGameState(GameStateType):
             vel_y = (-1 if upwards else 1) * (self.stone_min_y_vel + random.random() * (self.stone_max_vel - self.stone_min_y_vel))   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
             vel_x = (1 if on_the_left else -1) * math.sqrt(self.stone_max_vel - vel_y**2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
             vel = (vel_x, vel_y)
+            turning_speed = consts.STONE_TURNING_SPEED_MIN + random.random() * (consts.STONE_TURNING_SPEED_MAX - consts.STONE_TURNING_SPEED_MIN)
             
-            self.add_object(objects.Stone(pos, vel, size))
+            self.add_object(objects.Stone(pos, vel, size, turning_speed))
         self.stone_spawn_probability += consts.STONE_SPAWNING_PROPABILITY_INCREASE / (1 + self.stone_spawn_probability * consts.STONE_SPAWNING_PROPABILITY_INCREASE_DECREASE)
     
     def spawn_powerup(self):
@@ -226,8 +229,8 @@ class AndromedaClashGameState(GameStateType):
         self.powerup_spawn_probability += consts.POWERUP_SPAWNING_PROPABILITY_INCREASE / (1 + self.powerup_spawn_probability * consts.POWERUP_SPAWNING_PROPABILITY_INCREASE_DECREASE)
 
     def create_enemy(self, enemy_type: type[E]) -> E:
-        vel_y = self.enemy_min_y_vel + random.random() * (self.enemy_max_vel - self.enemy_min_y_vel)   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
-        vel_x = math.sqrt(self.enemy_max_vel - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
+        vel_y = self.enemy_min_y_vel + random.random() * (self.enemy_max_vel - self.enemy_min_y_vel) / 2   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
+        vel_x = math.sqrt(self.enemy_max_vel**2 - vel_y**2) * random.randrange(-1, 2, 2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.
         vel = (vel_x, vel_y)
         pos = (random.random() * GAME_SIZE[0], -consts.ENEMY_HEIGHT)
         target_height = consts.ENEMY_TARGET_HEIGHT_RANGE.start + consts.ENEMY_TARGET_HEIGHT_RANGE.stop - consts.ENEMY_TARGET_HEIGHT_RANGE.start * random.random()
@@ -239,7 +242,7 @@ class AndromedaClashGameState(GameStateType):
         self.current_wave = []
         wave_score = 2 + self.current_wave_idx * 2
         last_wave_score = 2 + (self.current_wave_idx - 1) * 2
-        previous_type: type[objects.CommonEnemy] = objects.CommonEnemy
+        previous_type = objects.CommonEnemy
         for obj_type, score in objects.ENEMY_COSTS.items():
             if score > wave_score:
                 strongest_type = previous_type
@@ -293,4 +296,7 @@ class AndromedaClashGameState(GameStateType):
             powerup.end_time = -1
     
     def update_score(self):
-        self.score_object.set_text(f'SCORE {self.score}')
+        self.score_object.set_text(f'SCORE: {self.score}')
+
+    def update_credits(self):
+        self.credits_object.set_text(f'Credits: {self.credits}C') 
