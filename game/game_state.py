@@ -115,7 +115,8 @@ class AndromedaClashGameState(GameStateType):
         self.add_player()
 
         self.credits_object = objects.Credits(consts.POS_CREDITS, "", consts.TEXT_SIZE_CREDITS, consts.TEXT_COLOR_CREDITS)
-        self.add_object(self.credits_o
+        self.add_object(self.credits_object)
+                        
     def add_object(self, obj: objects.Object2D):
         self.current_objects.add_object(obj)
     

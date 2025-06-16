@@ -464,6 +464,7 @@ class StrikePowerUp(PowerUp):
     strength: int
     effect_time = 20
     color = (0, 255, 255)
+    IMAGE_FILE = consts.POWERUP_STRIKE_IMAGE_PATH
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
         super().__init__(pos, vel)
@@ -501,12 +502,11 @@ class MultishotPowerUp(PowerUp):
     strength: int
     effect_time = 20
     color = (255, 0, 255)
-    image: Image
+    IMAGE_FILE = consts.POWERUP_MULTISHOT_IMAGE_PATH
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], strength: int = 1):
         super().__init__(pos, vel)
         self.strength = strength
-        self.image = pygame.transform.scale(load_image(consts.POWERUP_MULTISHOT_IMAGE_PATH), (consts.POWERUP_HEIGHT, consts.POWERUP_WIDTH))
 
     def activate_power(self):
         if type(self.game_state.player) == SpaceShip:
@@ -532,9 +532,6 @@ class MultishotPowerUp(PowerUp):
         if not isinstance(value, MultishotPowerUp):
             return False
         return self.strength > value.strength
-    
-    def draw(self, canvas):
-        canvas.blit(self.image, (self.pos[0] - consts.POWERUP_WIDTH / 2, self.pos[1] - consts.POWERUP_HEIGHT / 2))
     
 POWERUP_TYPES: list[type[PowerUp]] = [DoubleSpeedPowerUp, InvincibilityPowerUp, DoublePointsPowerUp, DoubleDamagePowerUp, StrikePowerUp, MultishotPowerUp] # Ansonsten funnktioniert es nicht. (wenn nicht in dieser Datei)
 
@@ -762,8 +759,8 @@ class BossEnemy(CommonEnemy):
     MAX_LIVES = consts.ENEMY_LIVES * 3
     def handle_shot(self):
         projectile_middle = FireProjectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.FIRE_PROJECTILE_HEIGHT / 2), (0, self.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
-        projectile_right = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (-math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED), -consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
-        projectile_left = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED), consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
+        projectile_right = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (-math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED), -consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
+        projectile_left = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED), consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
         self.game_state.add_object(projectile_middle)
         self.game_state.add_object(projectile_right)
         self.game_state.add_object(projectile_left)
@@ -772,13 +769,13 @@ class BossEnemy(CommonEnemy):
     def get_image(self) -> Image:
         return pygame.transform.flip(
             pygame.transform.scale(
-                load_image(consts.FIRE_ENEMY_IMAGE_PATH), (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT)
+                load_image(consts.BOSS_ENEMY_IMAGE_PATH), (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT)
             ),
             False, True
         )
 
 ENEMY_TYPES: list[type[CommonEnemy]] = [CommonEnemy, PiercingProjectileEnemy, FireEnemy, BossEnemy, BossEnemy]
-ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 3, FireEnemy: 8, BossEnemy: 20}
+ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 3, FireEnemy: 8, BossEnemy: 25}
 ENEMY_THRESHOLDS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 8, FireEnemy: 20, BossEnemy: 100}
 
 class LifeDisplay(Object2D):
