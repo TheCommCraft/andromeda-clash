@@ -205,7 +205,7 @@ class AndromedaClashGameState(GameStateType):
                 power_up.arc_cooldown.draw(self.canvas)
                 index += 1
                 power_up.update_activated()
-            if self.user_input.get_key_down_now(consts.key.ESCAPE) and self.currently_game_over:
+            if self.user_input.get_key_down_now(consts.key.RETURN) and self.currently_game_over:
                 self.register_score()
                 self.start_game()
             pygame.display.update() # Änderungen werden umgesetzt.
@@ -304,7 +304,7 @@ class AndromedaClashGameState(GameStateType):
         self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT), "GAME OVER", 16, (255, 255, 255)))
         self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), f"SCORE: {self.score}", 16, (255, 255, 255)))
         self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT), f"YOU SCORED #{highest_position + 1}!", 16, (255, 255, 255)))
-        self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 2.5), "PRESS ESCAPE TO RESTART", 16, (200, 200, 200)))
+        self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 2.5), "PRESS ENTER TO RESTART", 16, (200, 200, 200)))
         self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 4), "TYPE YOUR USERNAME (FOR THE LEADERBOARD):", 16, (255, 255, 255)))
         self.username_input = objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 5), "", 16, (255, 255, 255))
         self.add_object(objects.GameOverText((8, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT * 3), "HIGHSCORES:", 16, (255, 255, 255), justify=0))
