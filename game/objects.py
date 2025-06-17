@@ -178,10 +178,10 @@ class Projectile(Object2D):
     direction: number
     collider: module_collider.BoxCollider
     game_state: module_game_state.AndromedaClashGameState
-    WIDTH = consts.PROJECTILE_WIDTH
-    HEIGHT = consts.PROJECTILE_HEIGHT
-    HITBOX_WIDTH = consts.PROJECTILE_HITBOX_WIDTH
-    HITBOX_HEIGHT = consts.PROJECTILE_HITBOX_HEIGHT
+    width = consts.PROJECTILE_WIDTH
+    height = consts.PROJECTILE_HEIGHT
+    hitbox_width = consts.PROJECTILE_HITBOX_WIDTH
+    hitbox_height = consts.PROJECTILE_HITBOX_HEIGHT
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], direction: number, owner: ProjectileOwner):
         self.pos = pos
         self.vel = vel
@@ -190,16 +190,17 @@ class Projectile(Object2D):
         self.owner = owner
     
     def get_collider(self):
-        return module_collider.BoxCollider(self.HITBOX_WIDTH, self.HITBOX_HEIGHT, self.pos)
+        return module_collider.BoxCollider(self.hitbox_width, self.hitbox_height, self.pos)
     
     def draw(self, canvas):
-        offset = (math.sin(self.direction) * self.HEIGHT, -math.cos(self.direction) * self.HEIGHT)
+        offset = (math.sin(self.direction) * self.height, -math.cos(self.direction) * self.height)
         pygame.draw.line(
             canvas,
             self.color,
             (self.pos[0] - offset[0] / 2, self.pos[1] - offset[1] / 2),
             (self.pos[0] + offset[0] / 2, self.pos[1] + offset[1] / 2),
-        self.WIDTH)
+            self.width
+        )
     
     def update(self):
         if self.pos[1] < -50:
@@ -230,10 +231,10 @@ class PiercingProjectile(Projectile):
         return enemy in self._hit_enemies
 
 class FireProjectile(PiercingProjectile):
-    WIDTH = consts.FIRE_PROJECTILE_WIDTH
-    HEIGHT = consts.FIRE_PROJECTILE_HEIGHT
-    HITBOX_WIDTH = consts.FIRE_PROJECTILE_HITBOX_WIDTH
-    HITBOX_HEIGHT = consts.FIRE_PROJECTILE_HITBOX_HEIGHT
+    width = consts.FIRE_PROJECTILE_WIDTH
+    height = consts.FIRE_PROJECTILE_HEIGHT
+    hitbox_width = consts.FIRE_PROJECTILE_HITBOX_WIDTH
+    hitbox_height = consts.FIRE_PROJECTILE_HITBOX_HEIGHT
     color = (255, 0, 0)
 
 class PowerUp(Object2D):
@@ -650,9 +651,12 @@ class CommonEnemy(Object2D):
         self.damage_sound = module_sound.load_sound(consts.HIT_SOUND_PATH)
         self.lives = self.MAX_LIVES
         self.image = self.get_image()
-        self.health_bar = HealthBar(self.pos, self.lives, self.lives, self)
+        self.health_bar = self.get_health_bar()
         self.target_height = target_height
     
+    def get_health_bar(self) -> HealthBar:
+        return HealthBar(self.pos, self.lives, self.lives, self)
+        
     def get_image(self) -> Image:
         return pygame.transform.flip(
             pygame.transform.scale(
@@ -755,12 +759,17 @@ class FireEnemy(CommonEnemy):
         )
 
 class BossEnemy(CommonEnemy):
-    SHOT_COOLDOWN = consts.FIRE_ENEMY_SHOT_COOLDOWN // 3
-    MAX_LIVES = consts.ENEMY_LIVES * 3
+    SHOT_COOLDOWN = consts.BOSS_ENEMY_SHOT_COOLDOWN
+    MAX_LIVES = consts.BOSS_ENEMY_LIVES
+    PROJECTILE_SPEED = consts.FIRE_PROJECTILE_SPEED
+    
+    def get_health_bar(self) -> HealthBar:
+        return BossBar(self.pos, self.lives, self.lives, self)
+    
     def handle_shot(self):
         projectile_middle = FireProjectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.FIRE_PROJECTILE_HEIGHT / 2), (0, self.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
-        projectile_right = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (-math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED), -consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
-        projectile_left = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED), consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
+        projectile_right = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED), -consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
+        projectile_left = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (-math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED), consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
         self.game_state.add_object(projectile_middle)
         self.game_state.add_object(projectile_right)
         self.game_state.add_object(projectile_left)
@@ -775,8 +784,8 @@ class BossEnemy(CommonEnemy):
         )
 
 ENEMY_TYPES: list[type[CommonEnemy]] = [CommonEnemy, PiercingProjectileEnemy, FireEnemy, BossEnemy, BossEnemy]
-ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 3, FireEnemy: 8, BossEnemy: 25}
-ENEMY_THRESHOLDS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 8, FireEnemy: 20, BossEnemy: 100}
+ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 3, FireEnemy: 8, BossEnemy: 15}
+ENEMY_THRESHOLDS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 8, FireEnemy: 17, BossEnemy: 21}
 
 class LifeDisplay(Object2D):
     image: Image
@@ -811,18 +820,20 @@ class Text(Object2D):
     text_color: tuple[int, int, int]
     text_size: int
     font: pygame.font.FontType
+    justify: float
     
-    def __init__(self, pos: tuple[number, number], text: str, text_size: int, text_color: tuple[int, int, int]):
+    def __init__(self, pos: tuple[number, number], text: str, text_size: int, text_color: tuple[int, int, int], justify: float = 0.5):
         self.pos = pos
         self.set_all(text, text_size, text_color)
+        self.justify = justify
         
     def update(self):
         pass
         
     def draw(self, canvas):
         rect = self.img.get_rect()
-        pos_x = self.pos[0] - rect.width / 2
-        pos_y = self.pos[1] - rect.height / 2
+        pos_x = self.pos[0] - rect.width * self.justify
+        pos_y = self.pos[1] - rect.height * self.justify
         canvas.blit(self.img, (pos_x, pos_y))       # Zeichnen des Textes
         
     def set_all(self, text: str, text_size: int, text_color: tuple[int, int, int]):               # Setter-Methoden
@@ -848,6 +859,10 @@ class Text(Object2D):
     def load_font(name: str | Path, size: int) -> pygame.font.FontType:
         return pygame.font.Font(name, size)
 
+class GameOverText(Text):
+    def get_draw_details(self):
+        return consts.DrawDetails.TOP_LAYER
+
 class Score(Text):
     def get_draw_details(self):
         return consts.DrawDetails.TOP_LAYER
@@ -860,8 +875,8 @@ class HealthBar(Object2D):
     max_lives: int
     lives: int
     pos: tuple[number, number]
-    height: int
-    width: int
+    height: int = consts.HEALTH_BAR_HEIGHT
+    width: int = consts.HEALTH_BAR_WIDTH
     parent: Object2D
     color: tuple[int, int, int] = consts.HEALTH_BAR_COLOR
     background_color: tuple[int, int, int] = consts.HEALTH_BAR_BACKGROUND_COLOR
@@ -884,12 +899,15 @@ class HealthBar(Object2D):
     def draw(self, canvas):
         pos_x = self.pos[0]
         pos_y = self.pos[1]
-        pygame.draw.rect(canvas, self.background_color, (pos_x - consts.HEALTH_BAR_WIDTH / 2, pos_y, consts.HEALTH_BAR_WIDTH, consts.HEALTH_BAR_HEIGHT))
-        pygame.draw.rect(canvas, self.color, (pos_x - consts.HEALTH_BAR_WIDTH / 2, pos_y, consts.HEALTH_BAR_WIDTH * (self.lives / self.max_lives), consts.HEALTH_BAR_HEIGHT))
+        pygame.draw.rect(canvas, self.background_color, (pos_x - self.width / 2, pos_y, self.width, self.height))
+        pygame.draw.rect(canvas, self.color, (pos_x - self.width / 2, pos_y, self.width * (self.lives / self.max_lives), self.height))
         player_attack_damage = self.parent_game_state.player.attack_damage
         for i in range(0, math.ceil(self.lives / player_attack_damage)):
             health_step = self.lives - i * player_attack_damage
-            pygame.draw.rect(canvas, self.slice_color, (pos_x - consts.HEALTH_BAR_WIDTH / 2 - consts.HEALTH_BAR_SLICE_WIDTH / 2 + consts.HEALTH_BAR_WIDTH * (health_step / self.max_lives), pos_y, consts.HEALTH_BAR_SLICE_WIDTH, consts.HEALTH_BAR_HEIGHT))
+            pygame.draw.rect(canvas, self.slice_color, (pos_x - self.width / 2 - consts.HEALTH_BAR_SLICE_WIDTH / 2 + self.width * (health_step / self.max_lives), pos_y, consts.HEALTH_BAR_SLICE_WIDTH, self.height))
+
+class BossBar(HealthBar):
+    width = consts.BOSS_BAR_WIDTH
 
 class ArcCooldown(Object2D):
     max_time: float
@@ -918,3 +936,65 @@ class ArcCooldown(Object2D):
         pos_y = self.pos[1]
         fraction = (self.end_time - time.time()) / self.max_time
         pygame.draw.arc(canvas, self.color, (pos_x - self.radius, pos_y - self.radius, self.radius * 2, self.radius * 2), -math.pi / 2, (fraction - 0.25) * math.pi * 2)
+
+class UsernameInputTracker(Object2D):
+    username: str
+    game_state: module_game_state.AndromedaClashGameState
+    keys: dict[consts.key, str]= {
+        consts.key.a: "A",
+        consts.key.b: "B",
+        consts.key.c: "C",
+        consts.key.d: "D",
+        consts.key.e: "E",
+        consts.key.f: "F",
+        consts.key.g: "G",
+        consts.key.h: "H",
+        consts.key.i: "I",
+        consts.key.j: "J",
+        consts.key.k: "K",
+        consts.key.l: "L",
+        consts.key.m: "M",
+        consts.key.n: "N",
+        consts.key.o: "O",
+        consts.key.p: "P",
+        consts.key.q: "Q",
+        consts.key.r: "R",
+        consts.key.s: "S",
+        consts.key.t: "T",
+        consts.key.u: "U",
+        consts.key.v: "V",
+        consts.key.w: "W",
+        consts.key.x: "X",
+        consts.key.y: "Y",
+        consts.key.z: "Z",
+        consts.key.zero: "0",
+        consts.key.one: "1",
+        consts.key.two: "2",
+        consts.key.three: "3",
+        consts.key.four: "4",
+        consts.key.five: "5",
+        consts.key.six: "6",
+        consts.key.seven: "7",
+        consts.key.eight: "8",
+        consts.key.nine: "9",
+        consts.key.SPACE: "_",
+        consts.key.MINUS: "_",
+        consts.key.PLUS: "_",
+        consts.key.UNDERSCORE: "_"
+    }
+    def __init__(self):
+        self.username = ""
+    
+    def draw(self, canvas):
+        pass
+    
+    def update(self):
+        for key, value in self.keys.items():
+            if self.user_input.get_key_down_now(key):
+                self.username += value
+        if self.user_input.get_key_down_now(consts.key.BACKSPACE):
+            self.username = self.username[:-1]
+        text = self.username + ("_" if self.game_state.current_tick % 20 < 10 else "")
+        self.game_state.username_input.justify = 0.0
+        self.game_state.username_input.set_text(text)
+        self.game_state.username = self.username

@@ -8,10 +8,10 @@ if TYPE_CHECKING:
     from _typeshed import FileDescriptorOrPath
 
 def _hashable_path(path: "FileDescriptorOrPath") -> Hashable:
-    if isinstance(path, Hashable):
-        return path
     if isinstance(path, PathLike):
         return str(path)
+    if isinstance(path, Hashable):
+        return path
     return ""
 
 _load_sound = cache(pygame.mixer.Sound)

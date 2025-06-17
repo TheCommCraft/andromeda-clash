@@ -11,6 +11,7 @@ from . import consts
 from . import objects
 from . import user_input as module_user_input
 from . import data_structures
+from .storage import save_data, read_data
 from . import sound as module_sound
 from . import images as modules_images
 
@@ -54,7 +55,6 @@ class AndromedaClashGameState(GameStateType):
     enemy_max_vel: float
     powerup_spawn_probability: float
     score: int
-    highscore: int
     score_object: objects.Score
     lives_object: objects.LifeDisplay
     background_image: modules_images.Image
@@ -64,6 +64,9 @@ class AndromedaClashGameState(GameStateType):
     current_wave_cooldown: int
     current_wave_idx: int
     credits: int
+    username_input: objects.Text
+    username: str
+    current_tick: int
     
     @property
     def lives(self) -> int:
@@ -81,12 +84,13 @@ class AndromedaClashGameState(GameStateType):
         self.user_input = user_input
         self.background_image = pygame.transform.scale(modules_images.load_image(consts.BACKGROUND_IMAGE_PATH), GAME_SIZE)
         
-        self.highscore = 0
         self.credits = 0
+        self.current_tick = 0
         
         self.start_game()
     
     def start_game(self):
+        self.username = ""
         if hasattr(self, "active_powerups"):
             for power_up in self.active_powerups:
                 power_up.deactivate_power()
@@ -116,6 +120,7 @@ class AndromedaClashGameState(GameStateType):
 
         self.credits_object = objects.Credits(consts.POS_CREDITS, "", consts.TEXT_SIZE_CREDITS, consts.TEXT_COLOR_CREDITS)
         self.add_object(self.credits_object)
+        self.username_input = objects.Text((0, 0), "", 1, (0, 0, 0))
                         
     def add_object(self, obj: objects.Object2D):
         self.current_objects.add_object(obj)
@@ -162,12 +167,14 @@ class AndromedaClashGameState(GameStateType):
     def loop(self) -> None:
         running = True
         while running:
+            self.current_tick += 1
             self.canvas.fill((0, 0, 0))
             self.canvas.blit(self.background_image, (0, 0)) # Hintergrund wird mit Bild gefüllt
             self.user_input.process_tick()
             for event in pygame.event.get():
                 self.user_input.process_event(event)
                 if event.type == pygame.QUIT: # Falls Schliessen-Knopf gedruckt wird, wird das Programm beendet. 
+                    self.register_score()
                     running = False
             self.spawn_stone()
             self.spawn_powerup()
@@ -198,7 +205,8 @@ class AndromedaClashGameState(GameStateType):
                 power_up.arc_cooldown.draw(self.canvas)
                 index += 1
                 power_up.update_activated()
-            if self.user_input.get_key_down_now(consts.key.r) and self.currently_game_over:
+            if self.user_input.get_key_down_now(consts.key.ESCAPE) and self.currently_game_over:
+                self.register_score()
                 self.start_game()
             pygame.display.update() # Änderungen werden umgesetzt.
             self.clock.tick(self.fps)
@@ -281,17 +289,30 @@ class AndromedaClashGameState(GameStateType):
         if self.current_wave_cooldown <= 0 and self.current_wave:
             self.add_object(self.current_wave.pop(0))
             self.current_wave_cooldown = consts.ENEMY_SPAWN_COOLDOWN
+    
+    def register_score(self):
+        self.username = self.username or "NO_USERNAME_GIVEN"
+        highscores = [(line.split(",", 1)[0], int(line.split(",", 1)[1])) for line in read_data("highscores").split(";") if line.strip()]
+        highest_position = (max(enumerate(highscores + [("", -1)]), key=lambda x: (x[1][1] < self.score, -x[0])))[0] if highscores else 0
+        highscores.insert(highest_position, (self.username, self.score))
+        save_data("highscores", ";".join(i + "," + str(j) for i, j in highscores[:5]))
 
     def game_over(self):
         self.remove_all_objects()
-        if self.score > self.highscore:
-            self.highscore = self.score
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT), "GAME OVER", 16, (255, 255, 255)))
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), f"SCORE: {self.score}", 16, (255, 255, 255)))
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT), f"HIGHSCORE: {self.highscore}", 16, (255, 255, 255)))
-        self.add_object(objects.Text((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 2.5), "PRESS R TO RESTART", 16, (200, 200, 200)))
-        self.credits += (self.score//100)
-        self.score = 0
+        highscores = [(line.split(",", 1)[0], int(line.split(",", 1)[1])) for line in read_data("highscores").split(";") if line.strip()]
+        highest_position = (max(enumerate(highscores + [("", -1)]), key=lambda x: (x[1][1] < self.score, -x[0])))[0] if highscores else 0 # Gets your position in the highscore list
+        self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT), "GAME OVER", 16, (255, 255, 255)))
+        self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2), f"SCORE: {self.score}", 16, (255, 255, 255)))
+        self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT), f"YOU SCORED #{highest_position + 1}!", 16, (255, 255, 255)))
+        self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 2.5), "PRESS ESCAPE TO RESTART", 16, (200, 200, 200)))
+        self.add_object(objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 4), "TYPE YOUR USERNAME (FOR THE LEADERBOARD):", 16, (255, 255, 255)))
+        self.username_input = objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 5), "", 16, (255, 255, 255))
+        self.add_object(objects.GameOverText((8, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT * 3), "HIGHSCORES:", 16, (255, 255, 255), justify=0))
+        for idx, (user, score) in enumerate(highscores + [("...", "...")]):
+            self.add_object(objects.GameOverText((8, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * (idx - 2)), f"{idx + 1}. {user}: {score}", 16, (255, 255, 255), justify=0))
+        self.add_object(self.username_input)
+        self.add_object(objects.UsernameInputTracker())
+        self.credits += (self.score // 100)
         self.currently_game_over = True
         for powerup in self.active_powerups:
             powerup.end_time = -1
