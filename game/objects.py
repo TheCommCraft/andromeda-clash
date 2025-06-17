@@ -627,7 +627,9 @@ class Stone(Object2D):
 class CommonEnemy(Object2D):
     pos: tuple[number, number]
     vel: tuple[number, number]
-    size: tuple[number, number]
+    size: tuple[number, number] = (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT)
+    hitbox_width = consts.ENEMY_HITBOX_WIDTH
+    hitbox_height = consts.ENEMY_HITBOX_HEIGHT
     collider: module_collider.BoxCollider
     shot_cooldown_timer: int
     shot_sound: module_sound.Sound
@@ -636,20 +638,19 @@ class CommonEnemy(Object2D):
     health_bar: HealthBar
     game_state: module_game_state.AndromedaClashGameState
     target_height: float
-    SHOT_COOLDOWN = consts.ENEMY_SHOT_COOLDOWN
-    PROJECTILE_SPEED = consts.PROJECTILE_SPEED
-    MAX_LIVES = consts.ENEMY_LIVES
+    shot_cooldown = consts.ENEMY_SHOT_COOLDOWN
+    projectile_speed = consts.PROJECTILE_SPEED
+    max_lives = consts.ENEMY_LIVES
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], target_height: float):
         self.pos = pos
         self.vel = vel
-        self.size = (consts.ENEMY_HITBOX_WIDTH, consts.ENEMY_HITBOX_HEIGHT)
-        self.collider = module_collider.BoxCollider(consts.ENEMY_HITBOX_WIDTH, consts.ENEMY_HITBOX_HEIGHT, pos)
+        self.collider = module_collider.BoxCollider(self.hitbox_width, self.hitbox_height, pos)
         self.color = consts.ENEMY_COLOR[0]
-        self.shot_cooldown_timer = self.SHOT_COOLDOWN
+        self.shot_cooldown_timer = self.shot_cooldown
         self.shot_sound = module_sound.load_sound(consts.SHOOT_SOUND_PATH)
         self.damage_sound = module_sound.load_sound(consts.HIT_SOUND_PATH)
-        self.lives = self.MAX_LIVES
+        self.lives = self.max_lives
         self.image = self.get_image()
         self.health_bar = self.get_health_bar()
         self.target_height = target_height
@@ -660,7 +661,7 @@ class CommonEnemy(Object2D):
     def get_image(self) -> Image:
         return pygame.transform.flip(
             pygame.transform.scale(
-                load_image(consts.ENEMY_IMAGE_PATH), (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT)
+                load_image(consts.ENEMY_IMAGE_PATH), self.size
             ),
             False, True
         )
@@ -684,10 +685,10 @@ class CommonEnemy(Object2D):
         self.shot_cooldown_timer -= 1
         if self.shot_cooldown_timer <= 0:
             self.handle_shot()
-            self.shot_cooldown_timer = self.SHOT_COOLDOWN
+            self.shot_cooldown_timer = self.shot_cooldown
     
     def handle_shot(self):
-        projectile = Projectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.PROJECTILE_HEIGHT / 2), (0, self.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
+        projectile = Projectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.PROJECTILE_HEIGHT / 2), (0, self.projectile_speed), 0, ProjectileOwner.ENEMY)
         self.game_state.add_object(projectile)
         self.shot_sound.play()
 
@@ -730,7 +731,7 @@ class CommonEnemy(Object2D):
 
 class PiercingProjectileEnemy(CommonEnemy):
     def handle_shot(self):
-        projectile = PiercingProjectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.PROJECTILE_HEIGHT / 2), (0, self.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
+        projectile = PiercingProjectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.PROJECTILE_HEIGHT / 2), (0, self.projectile_speed), 0, ProjectileOwner.ENEMY)
         self.game_state.add_object(projectile)
         self.shot_sound.play()
     
@@ -743,33 +744,50 @@ class PiercingProjectileEnemy(CommonEnemy):
         )
 
 class FireEnemy(CommonEnemy):
-    SHOT_COOLDOWN = consts.FIRE_ENEMY_SHOT_COOLDOWN
-    PROJECTILE_SPEED = consts.FIRE_PROJECTILE_SPEED
+    shot_cooldown = consts.FIRE_ENEMY_SHOT_COOLDOWN
+    projectile_speed = consts.FIRE_PROJECTILE_SPEED
     def handle_shot(self):
-        projectile = FireProjectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.FIRE_PROJECTILE_HEIGHT / 2), (0, self.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
+        projectile = FireProjectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.FIRE_PROJECTILE_HEIGHT / 2), (0, self.projectile_speed), 0, ProjectileOwner.ENEMY)
         self.game_state.add_object(projectile)
         self.shot_sound.play()
     
     def get_image(self) -> Image:
         return pygame.transform.flip(
             pygame.transform.scale(
-                load_image(consts.FIRE_ENEMY_IMAGE_PATH), (consts.ENEMY_WIDTH, consts.ENEMY_HEIGHT)
+                load_image(consts.FIRE_ENEMY_IMAGE_PATH), self.size
             ),
             False, True
         )
 
 class BossEnemy(CommonEnemy):
-    SHOT_COOLDOWN = consts.BOSS_ENEMY_SHOT_COOLDOWN
-    MAX_LIVES = consts.BOSS_ENEMY_LIVES
-    PROJECTILE_SPEED = consts.FIRE_PROJECTILE_SPEED
+    shot_cooldown = consts.BOSS_ENEMY_SHOT_COOLDOWN
+    max_lives = consts.BOSS_ENEMY_LIVES
+    projectile_speed = consts.FIRE_PROJECTILE_SPEED
+    hitbox_width = consts.BOSS_ENEMY_HITBOX_WIDTH
+    hitbox_height = consts.BOSS_ENEMY_HITBOX_HEIGHT
+    size = (consts.BOSS_ENEMY_WIDTH, consts.BOSS_ENEMY_HEIGHT)
+    
+    def __init__(self, pos, vel, target_height):
+        super().__init__(pos, vel, target_height)
+        self.vel = (
+            1.0,
+            self.vel[1]
+        )
+    
+    def update(self):
+        self.vel = (
+            self.vel[0] + (consts.SCREEN_WIDTH / 2 - self.pos[0]) * 0.0002,
+            self.vel[1]
+        )
+        return super().update()
     
     def get_health_bar(self) -> HealthBar:
         return BossBar(self.pos, self.lives, self.lives, self)
     
     def handle_shot(self):
-        projectile_middle = FireProjectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.FIRE_PROJECTILE_HEIGHT / 2), (0, self.PROJECTILE_SPEED), 0, ProjectileOwner.ENEMY)
-        projectile_right = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED), -consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
-        projectile_left = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (-math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.PROJECTILE_SPEED), consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
+        projectile_middle = FireProjectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.FIRE_PROJECTILE_HEIGHT / 2), (0, self.projectile_speed), 0, ProjectileOwner.ENEMY)
+        projectile_right = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed), -consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
+        projectile_left = FireProjectile((self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (-math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed), consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
         self.game_state.add_object(projectile_middle)
         self.game_state.add_object(projectile_right)
         self.game_state.add_object(projectile_left)
@@ -784,8 +802,8 @@ class BossEnemy(CommonEnemy):
         )
 
 ENEMY_TYPES: list[type[CommonEnemy]] = [CommonEnemy, PiercingProjectileEnemy, FireEnemy, BossEnemy, BossEnemy]
-ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 3, FireEnemy: 8, BossEnemy: 15}
-ENEMY_THRESHOLDS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 8, FireEnemy: 17, BossEnemy: 21}
+ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 3, FireEnemy: 8, BossEnemy: 16}
+ENEMY_THRESHOLDS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 8, FireEnemy: 14, BossEnemy: 22}
 
 class LifeDisplay(Object2D):
     image: Image
@@ -908,7 +926,8 @@ class HealthBar(Object2D):
 
 class BossBar(HealthBar):
     width = consts.BOSS_BAR_WIDTH
-    slice_color = consts.HEALTH_BAR_COLOR
+    color = consts.BOSS_BAR_COLOR
+    slice_color = consts.BOSS_BAR_COLOR
 
 class ArcCooldown(Object2D):
     max_time: float
@@ -995,6 +1014,7 @@ class UsernameInputTracker(Object2D):
                 self.username += value
         if self.user_input.get_key_down_now(consts.key.BACKSPACE):
             self.username = self.username[:-1]
+        self.username = self.username[:32]
         text = self.username + ("_" if self.game_state.current_tick % 20 < 10 else "")
         self.game_state.username_input.justify = 0.0
         self.game_state.username_input.set_text(text)
