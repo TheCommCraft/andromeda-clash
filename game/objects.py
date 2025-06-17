@@ -908,6 +908,7 @@ class HealthBar(Object2D):
 
 class BossBar(HealthBar):
     width = consts.BOSS_BAR_WIDTH
+    slice_color = consts.HEALTH_BAR_COLOR
 
 class ArcCooldown(Object2D):
     max_time: float
