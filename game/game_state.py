@@ -77,6 +77,8 @@ class AndromedaClashGameState(GameStateType):
         self.lives_object.lives = value
     
     def __init__(self, canvas: objects.Canvas, user_input: module_user_input.UserInputType) -> None:
+        pygame.mixer.music.load(consts.SOUNDS_PATH / "ruder_buster.ogg")
+        pygame.mixer.music.play(-1)
         self.canvas = canvas
         self.current_objects = data_structures.ObjectContainer()
         self.clock = pygame.time.Clock()
