@@ -3,7 +3,7 @@ from pathlib import Path
 from asyncio import Queue, run
 import asyncio
 from enum import Enum
-from pygbag.support.cross.aio.fetch import RequestHandler
+from pygbag.aio.fetch import RequestHandler
 if sys.platform == "emscripten":
     from platform import window
 else:
@@ -49,13 +49,13 @@ async def execute_http_tasks() -> None:
 
 async def asave_data(key: str, data: str) -> None:
     if sys.platform != "emscripten":
-        requests.post(f"https://tlds1.warp.thecommcraft.de/storage/file/{key}/", data=data, timeout=2)
+        requests.post(f"https://tlds1.warp.thecommcraft.de/storage/file/{key}/", data=data, timeout=10)
         return
     await http.post(f"https://tlds1.warp.thecommcraft.de/storage/file/{key}/", data=data)
     
 async def aread_data(key: str) -> str:
     if sys.platform != "emscripten":
-        return requests.get(f"https://tlds1.warp.thecommcraft.de/storage/file/{key}/", timeout=2).text
+        return requests.get(f"https://tlds1.warp.thecommcraft.de/storage/file/{key}/", timeout=10).text
     return await http.get(f"https://tlds1.warp.thecommcraft.de/storage/file/{key}/")
 
 def exit_executor():
