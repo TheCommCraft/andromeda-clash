@@ -59,7 +59,7 @@ class AsyncLoopTransformer(ast.NodeTransformer):
             # This is specific to AndromedaClashGameState.loop, others might just become async
             new_body = []
             if self.class_name == "AndromedaClashGameState": # Only AndromedaClashGameState has the clock.tick
-                while_loop = async_node.body[1]
+                while_loop = async_node.body[3]
                 if not isinstance(while_loop, ast.While):
                     return async_node
                 for stmt in while_loop.body:
