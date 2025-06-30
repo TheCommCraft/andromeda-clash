@@ -1,7 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Collection
-from pathlib import Path
 from typing import TypeVar
 import random
 import time
@@ -320,9 +319,9 @@ class AndromedaClashGameState(GameStateType):
         self._add_game_over_text(f"YOU SCORED #{highest_position + 1}!", (consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT))
         self._add_game_over_text("PRESS ENTER TO RESTART", (consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 2.5), color=(200, 200, 200))
         self._add_game_over_text("TYPE YOUR USERNAME (FOR THE LEADERBOARD):", (consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 4))
-        self._add_game_over_text("HIGHSCORES:", (8, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT * 3), justify=0)
+        self._add_game_over_text("HIGHSCORES:", (8, consts.SCREEN_HEIGHT / 2 - consts.GAME_OVER_LINE_HEIGHT * 4.5), justify=0)
         for idx, (user, score) in enumerate(highscores + [("...", "...")]):
-            self._add_game_over_text(f"{idx + 1}. {user}: {score}", (8, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * (idx - 2)), justify=0)
+            self._add_game_over_text(f"{idx + 1}. {user}: {score}", (8, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * (idx - 3)), justify=0)
         self.username_input = objects.GameOverText((consts.SCREEN_WIDTH / 2, consts.SCREEN_HEIGHT / 2 + consts.GAME_OVER_LINE_HEIGHT * 5), "", 16, (255, 255, 255))
         self.add_object(self.username_input)
         self.add_object(objects.UsernameInputTracker())

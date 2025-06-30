@@ -203,7 +203,7 @@ class Projectile(Object2D):
         )
     
     def update(self):
-        if self.pos[1] < -50:
+        if self.pos[1] < -20 or self.pos[1] > consts.SCREEN_HEIGHT + 20:
             self.game_state.remove_object(self)
         self.pos = (
             self.pos[0] + self.vel[0],
