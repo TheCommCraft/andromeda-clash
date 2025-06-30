@@ -158,14 +158,14 @@ class SpaceShip(Object2D):
     def handle_shot(self):
         if not self.multishot:
             projectile = \
-                (PiercingProjectile if self.piercing else Projectile)((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2 - consts.PROJECTILE_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
+                (WaveProjectile if self.piercing else Projectile)((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2 - consts.PROJECTILE_HEIGHT / 2), (0, -consts.PROJECTILE_SPEED), 0, ProjectileOwner.PLAYER)
             self.game_state.add_object(projectile)
         else:
             # Die Projektile müssen noch schrägfliegend gemacht werden.
             projectile_1 = \
-                (PiercingProjectile if self.piercing else Projectile)((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2 - consts.PROJECTILE_HEIGHT / 2), (-math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * consts.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * consts.PROJECTILE_SPEED), -consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.PLAYER)
+                (WaveProjectile if self.piercing else Projectile)((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2 - consts.PROJECTILE_HEIGHT / 2), (-math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * consts.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * consts.PROJECTILE_SPEED), -consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.PLAYER)
             projectile_2 = \
-                (PiercingProjectile if self.piercing else Projectile)((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2 - consts.PROJECTILE_HEIGHT / 2), (math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * consts.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * consts.PROJECTILE_SPEED), consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.PLAYER)
+                (WaveProjectile if self.piercing else Projectile)((self.pos[0], self.pos[1] - consts.SPACESHIP_HEIGHT / 2 - consts.PROJECTILE_HEIGHT / 2), (math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * consts.PROJECTILE_SPEED, -math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * consts.PROJECTILE_SPEED), consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.PLAYER)
             self.game_state.add_object(projectile_1)
             self.game_state.add_object(projectile_2)
         self.shoot_sound.play()
@@ -199,7 +199,7 @@ class Projectile(Object2D):
             self.color,
             (self.pos[0] - offset[0] / 2, self.pos[1] - offset[1] / 2),
             (self.pos[0] + offset[0] / 2, self.pos[1] + offset[1] / 2),
-            self.width
+            int(self.width)
         )
     
     def update(self):
@@ -236,6 +236,19 @@ class FireProjectile(PiercingProjectile):
     hitbox_width = consts.FIRE_PROJECTILE_HITBOX_WIDTH
     hitbox_height = consts.FIRE_PROJECTILE_HITBOX_HEIGHT
     color = (255, 0, 0)
+    
+class WaveProjectile(PiercingProjectile):
+    width = consts.WAVE_PROJECTILE_WIDTH
+    height = consts.WAVE_PROJECTILE_HEIGHT
+    hitbox_width = consts.WAVE_PROJECTILE_HITBOX_WIDTH
+    hitbox_height = consts.WAVE_PROJECTILE_HITBOX_HEIGHT
+    color = (0, 255, 255)
+    
+    def update(self):
+        self.width += consts.WAVE_GROW_RATE
+        self.hitbox_width += consts.WAVE_GROW_RATE
+        self.collider.width = self.hitbox_width
+        return super().update()
 
 class PowerUp(Object2D):
     '''
@@ -733,7 +746,7 @@ class CommonEnemy(Object2D):
 
 class PiercingProjectileEnemy(CommonEnemy):
     def handle_shot(self):
-        projectile = PiercingProjectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.PROJECTILE_HEIGHT / 2), (0, self.projectile_speed), 0, ProjectileOwner.ENEMY)
+        projectile = WaveProjectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.PROJECTILE_HEIGHT / 2), (0, self.projectile_speed), 0, ProjectileOwner.ENEMY)
         self.game_state.add_object(projectile)
         self.shot_sound.play()
     
