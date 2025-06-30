@@ -813,9 +813,9 @@ class BossEnemy(CommonEnemy):
             load_image(consts.BOSS_ENEMY_IMAGE_PATH), (consts.BOSS_ENEMY_WIDTH, consts.BOSS_ENEMY_HEIGHT)
         )
 
-ENEMY_TYPES: list[type[CommonEnemy]] = [CommonEnemy, PiercingProjectileEnemy, FireEnemy, BossEnemy, BossEnemy]
-ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 3, FireEnemy: 8, BossEnemy: 16}
-ENEMY_THRESHOLDS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, PiercingProjectileEnemy: 8, FireEnemy: 14, BossEnemy: 22}
+ENEMY_TYPES: list[type[CommonEnemy]] = [CommonEnemy, FireEnemy, PiercingProjectileEnemy, BossEnemy, BossEnemy]
+ENEMY_COSTS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, FireEnemy: 3, PiercingProjectileEnemy: 8, BossEnemy: 16}
+ENEMY_THRESHOLDS: dict[type[CommonEnemy], int] = {CommonEnemy: 1, FireEnemy: 8, PiercingProjectileEnemy: 14, BossEnemy: 22}
 
 class LifeDisplay(Object2D):
     image: Image
