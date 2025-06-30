@@ -81,7 +81,7 @@ class AndromedaClashGameState(GameStateType):
         self.canvas = canvas
         self.current_objects = data_structures.ObjectContainer()
         self.clock = pygame.time.Clock()
-        self.fps = 60
+        self.fps = consts.SECOND
         self.user_input = user_input
         self.background_image = pygame.transform.scale(modules_images.load_image(consts.BACKGROUND_IMAGE_PATH), GAME_SIZE)
         
@@ -226,7 +226,7 @@ class AndromedaClashGameState(GameStateType):
             on_the_left = random.random() < 0.5
             pos_y = self.player.pos[1] - consts.SPACESHIP_HITBOX_HEIGHT * 6
             if self.player.pos[1] < consts.SCREEN_HEIGHT / 2:
-                pos_y = consts.SCREEN_HEIGHT / 2 + consts.SPACESHIP_HITBOX_HEIGHT
+                pos_y = consts.SCREEN_HEIGHT / 2 - consts.SPACESHIP_HITBOX_HEIGHT
             pos = (-size * consts.STONE_BASE_RADIUS if on_the_left else consts.SCREEN_WIDTH + size * consts.STONE_BASE_RADIUS, pos_y)
             vel_y = (-1 if upwards else 1) * (self.stone_min_y_vel + random.random() * (self.stone_max_vel - self.stone_min_y_vel))   # Stellt sicher, dass die vertikale Bewegung im Intervall von min_y_vel_stone bis max_vel_stone liegt.
             vel_x = (1 if on_the_left else -1) * math.sqrt(self.stone_max_vel - vel_y**2)   # Stellt sicher, dass die absolute Geschwindigkeit der Maximalen entspricht. Die random Funktion am Ende macht, dass der Stein sich zufällig nach rechts oder links bewegt.

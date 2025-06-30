@@ -713,15 +713,17 @@ class CommonEnemy(Object2D):
                 self.damage_sound.play()
                 continue
 
+            death_score = consts.BOSS_ENEMY_SCORE if isinstance(self, BossEnemy) else consts.SCORE_ENEMY
+
             self.damage_sound.play()
             self.game_state.remove_object(self)
-            self.game_state.score += consts.SCORE_ENEMY * self.game_state.player.point_multiplier
+            self.game_state.score += death_score * self.game_state.player.point_multiplier
             self.game_state.update_score()
 
     def draw(self, canvas):
-        self.health_bar.pos = (self.pos[0], self.pos[1] - consts.ENEMY_HEIGHT / 2 - consts.HEALTH_BAR_HEIGHT - 2)
+        self.health_bar.pos = (self.pos[0], self.pos[1] - self.size[1] / 2 - self.health_bar.height - 2)
         self.health_bar.draw(canvas)
-        canvas.blit(self.image, (self.pos[0] - consts.ENEMY_WIDTH / 2, self.pos[1] - consts.ENEMY_HEIGHT / 2))
+        canvas.blit(self.image, (self.pos[0] - self.size[0] / 2, self.pos[1] - self.size[1] / 2))
         
     def set_pos(self, new_pos):
         self.pos = new_pos
@@ -770,13 +772,13 @@ class BossEnemy(CommonEnemy):
     def __init__(self, pos, vel, target_height):
         super().__init__(pos, vel, target_height)
         self.vel = (
-            1.0,
+            0.0,
             self.vel[1]
         )
     
     def update(self):
         self.vel = (
-            self.vel[0] + (consts.SCREEN_WIDTH / 2 - self.pos[0]) * 0.0002,
+            math.sin(self.game_state.current_tick * consts.BOSS_ENEMY_MOVEMENT_FREQUENCY) * consts.BOSS_ENEMY_MAX_SPEED,
             self.vel[1]
         )
         return super().update()
@@ -785,20 +787,17 @@ class BossEnemy(CommonEnemy):
         return BossBar(self.pos, self.lives, self.lives, self)
     
     def handle_shot(self):
-        projectile_middle = FireProjectile((self.pos[0] + consts.BOSS_ENEMY_WIDTH / 2, self.pos[1] + consts.BOSS_ENEMY_HEIGHT / 2 + consts.FIRE_PROJECTILE_HEIGHT / 2), (0, self.projectile_speed), 0, ProjectileOwner.ENEMY)
-        projectile_right = FireProjectile((self.pos[0] + consts.BOSS_ENEMY_WIDTH / 2, self.pos[1] + consts.BOSS_ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed), -consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
-        projectile_left = FireProjectile((self.pos[0] + consts.BOSS_ENEMY_WIDTH / 2, self.pos[1] + consts.BOSS_ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (-math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed), consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
+        projectile_middle = FireProjectile((self.pos[0], self.pos[1] + consts.BOSS_ENEMY_HEIGHT / 2 + consts.FIRE_PROJECTILE_HEIGHT / 2), (0, self.projectile_speed), 0, ProjectileOwner.ENEMY)
+        projectile_right = FireProjectile((self.pos[0], self.pos[1] + consts.BOSS_ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed), -consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
+        projectile_left = FireProjectile((self.pos[0], self.pos[1] + consts.BOSS_ENEMY_HEIGHT / 2 - consts.FIRE_PROJECTILE_HEIGHT / 2), (-math.sin(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed, math.cos(consts.PROJECILE_MULTISHOT_ANGLE) * self.projectile_speed), consts.PROJECILE_MULTISHOT_ANGLE, ProjectileOwner.ENEMY)
         self.game_state.add_object(projectile_middle)
         self.game_state.add_object(projectile_right)
         self.game_state.add_object(projectile_left)
         self.shot_sound.play()
 
     def get_image(self) -> Image:
-        return pygame.transform.flip(
-            pygame.transform.scale(
-                load_image(consts.BOSS_ENEMY_IMAGE_PATH), (consts.BOSS_BAR_WIDTH, consts.BOSS_ENEMY_HEIGHT)
-            ),
-            False, True
+        return pygame.transform.scale(
+            load_image(consts.BOSS_ENEMY_IMAGE_PATH), (consts.BOSS_ENEMY_WIDTH, consts.BOSS_ENEMY_HEIGHT)
         )
 
 ENEMY_TYPES: list[type[CommonEnemy]] = [CommonEnemy, PiercingProjectileEnemy, FireEnemy, BossEnemy, BossEnemy]
@@ -928,10 +927,6 @@ class BossBar(HealthBar):
     width = consts.BOSS_BAR_WIDTH
     color = consts.BOSS_BAR_COLOR
     slice_color = consts.BOSS_BAR_COLOR
-    
-    def draw(self, canvas):
-        self.pos = (self.pos[0] + consts.BOSS_ENEMY_WIDTH / 2, self.pos[1])
-        return super().draw(canvas)
 
 class ArcCooldown(Object2D):
     max_time: float
