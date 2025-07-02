@@ -74,10 +74,11 @@ class SpaceShip(Object2D):
     damage_multiplier: int
     piercing: bool
     multishot: bool
+    base_attack_damage: number = consts.SPACESHIP_DAMAGE
     
     @property
     def attack_damage(self) -> number:
-        return consts.SPACESHIP_DAMAGE * self.damage_multiplier
+        return self.base_attack_damage * self.damage_multiplier
 
     @property
     def lives(self) -> int:
@@ -487,10 +488,12 @@ class StrikePowerUp(PowerUp):
     def activate_power(self):
         if type(self.game_state.player) == SpaceShip:
             self.game_state.player.piercing = True
+            self.game_state.player.base_attack_damage = consts.PIERCING_PROJECTILE_DAMAGE
 
     def deactivate_power(self):
         if type(self.game_state.player) == SpaceShip:
             self.game_state.player.piercing = False
+            self.game_state.player.base_attack_damage = consts.SPACESHIP_DAMAGE
 
     @classmethod
     def make_one(cls, pos, vel):
@@ -644,15 +647,15 @@ class CommonEnemy(Object2D):
     hitbox_width = consts.ENEMY_HITBOX_WIDTH
     hitbox_height = consts.ENEMY_HITBOX_HEIGHT
     collider: module_collider.BoxCollider
-    shot_cooldown_timer: int
+    shot_cooldown_timer: number
     shot_sound: module_sound.Sound
     lives: int
     image: Image
     health_bar: HealthBar
     game_state: module_game_state.AndromedaClashGameState
     target_height: float
-    shot_cooldown = consts.ENEMY_SHOT_COOLDOWN
-    projectile_speed = consts.PROJECTILE_SPEED
+    shot_cooldown: number = consts.ENEMY_SHOT_COOLDOWN
+    projectile_speed: number = consts.PROJECTILE_SPEED
     max_lives = consts.ENEMY_LIVES
 
     def __init__(self, pos: tuple[number, number], vel: tuple[number, number], target_height: float):
@@ -698,7 +701,7 @@ class CommonEnemy(Object2D):
         self.shot_cooldown_timer -= 1
         if self.shot_cooldown_timer <= 0:
             self.handle_shot()
-            self.shot_cooldown_timer = self.shot_cooldown
+            self.shot_cooldown_timer += self.shot_cooldown
     
     def handle_shot(self):
         projectile = Projectile((self.pos[0], self.pos[1] + consts.ENEMY_HEIGHT / 2 + consts.PROJECTILE_HEIGHT / 2), (0, self.projectile_speed), 0, ProjectileOwner.ENEMY)
